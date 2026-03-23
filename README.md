@@ -25,20 +25,20 @@ It scans local network devices, tracks changes over time, and provides an intera
 
 ```
 realMAp/
-	app.py
-	scanner.py
-	topology.py
-	monitor.py
-	database.py
-	index.html
-	requirements.txt
-	start.sh
+  app.py
+  scanner.py
+  topology.py
+  monitor.py
+  database.py
+  index.html
+  requirements.txt
+  start.sh
 
-	# runtime/generated files
-	network_data.db
-	snapshots.json
-	history.json
-	device_state.json
+  # runtime/generated files
+  network_data.db
+  snapshots.json
+  history.json
+  device_state.json
 ```
 
 ## Requirements
