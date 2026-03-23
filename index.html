@@ -1,0 +1,3058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RealMap — Live Network Topology</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --bg:        #050a0f;
+    --bg2:       #091218;
+    --bg3:       #0d1a24;
+    --accent:    #00d4ff;
+    --accent2:   #00ff88;
+    --warn:      #ffaa00;
+    --danger:    #ff3355;
+    --text:      #c8e6f0;
+    --textdim:   #4a7a8a;
+    --border:    #0f2a38;
+    --glow:      0 0 20px rgba(0,212,255,0.3);
+    --glow2:     0 0 20px rgba(0,255,136,0.3);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px
+    );
+    pointer-events:none;
+    z-index:1000;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glow);
+    animation: pulse-ring 2s infinite;
+    font-size: 16px;
+  }
+
+  @keyframes pulse-ring {
+    0%,100% { box-shadow: 0 0 10px rgba(0,212,255,0.4); }
+    50%      { box-shadow: 0 0 30px rgba(0,212,255,0.8); }
+  }
+
+  .logo h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,212,255,0.6);
+  }
+
+  .logo span {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--textdim);
+    letter-spacing: 2px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 24px;
+  }
+
+  .stat-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg3);
+    min-width: 70px;
+  }
+
+  .stat-pill .val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .stat-pill .val.green  { color: var(--accent2); }
+  .stat-pill .val.yellow { color: var(--warn); }
+  .stat-pill .val.red    { color: var(--danger); }
+  .stat-pill .lbl { font-size: 10px; color: var(--textdim); letter-spacing: 1px; text-transform: uppercase; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .scan-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-btn:hover {
+    background: rgba(0,212,255,0.1);
+    box-shadow: var(--glow);
+  }
+
+  .scan-btn.scanning {
+    color: var(--warn);
+    border-color: var(--warn);
+    animation: scanning-pulse 1s infinite;
+  }
+
+  @keyframes scanning-pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+  }
+
+  .time-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--textdim);
+    letter-spacing: 1px;
+  }
+
+  .health-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    min-width: 180px;
+  }
+
+  .health-label {
+    font-size: 10px;
+    color: var(--textdim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .health-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .health-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .health-fill.warning {
+    background: linear-gradient(90deg, var(--warn) 0%, var(--accent2) 100%);
+  }
+
+  .health-fill.danger {
+    background: var(--danger);
+  }
+
+  .health-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 30px;
+    text-align: right;
+  }
+
+  /* ── LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ── LEFT SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    border-bottom: 1px solid var(--border);
+    padding: 14px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--textdim);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 12px; height: 1px;
+    background: var(--accent);
+  }
+
+  .device-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .device-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .device-item:hover {
+    background: var(--bg3);
+    border-color: var(--border);
+  }
+
+  .device-item.selected {
+    background: rgba(0,212,255,0.08);
+    border-color: var(--accent);
+  }
+
+  .device-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .dot-online  { background: var(--accent2); color: var(--accent2); }
+  .dot-warning { background: var(--warn);    color: var(--warn); }
+  .dot-offline { background: var(--danger);  color: var(--danger); }
+
+  .device-info { flex: 1; min-width: 0; }
+  .device-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .device-ip   { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--textdim); }
+  .device-os   { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); opacity: 0.85; }
+
+  .device-lat {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* ── TOPOLOGY CANVAS ── */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Grid background */
+  .canvas-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  #topology-svg {
+    width: 100%; height: 100%;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 260px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  /* ── ALERTS ── */
+  .alerts-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .alert-item {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    border-left: 3px solid;
+    background: var(--bg3);
+    font-size: 12px;
+    animation: slide-in 0.3s ease;
+  }
+
+  @keyframes slide-in {
+    from { opacity:0; transform: translateX(20px); }
+    to   { opacity:1; transform: translateX(0); }
+  }
+
+  .alert-item.info    { border-color: var(--accent); }
+  .alert-item.warning { border-color: var(--warn); }
+  .alert-item.error   { border-color: var(--danger); }
+
+  .alert-msg  { color: var(--text); margin-bottom: 3px; line-height: 1.4; }
+  .alert-time { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--textdim); }
+
+  /* ── DEVICE DETAIL PANEL ── */
+  .detail-panel {
+    border-top: 1px solid var(--border);
+    padding: 14px;
+    min-height: 200px;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(15,42,56,0.5);
+    font-size: 12px;
+  }
+
+  .detail-label { color: var(--textdim); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
+  .detail-value { font-family: 'Share Tech Mono', monospace; color: var(--accent); font-size: 11px; }
+
+  /* ── FOOTER STATUS BAR ── */
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 5px 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--textdim);
+    flex-shrink: 0;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+    animation: blink 2s infinite;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .demo-badge {
+    background: rgba(255,170,0,0.15);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  /* ── D3 GRAPH STYLES ── */
+  .link-line {
+    stroke-opacity: 0.6;
+    transition: stroke 0.3s;
+  }
+
+  .link-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    fill: rgba(0,212,255,0.7);
+    pointer-events: none;
+  }
+
+  .node-circle {
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .node-circle:hover { filter: brightness(1.4); }
+
+  .node-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--text);
+    pointer-events: none;
+  }
+
+  .node-ip {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    fill: var(--textdim);
+    pointer-events: none;
+  }
+
+  /* Legend */
+  .legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(9,18,24,0.9);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    color: var(--text);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .zoom-btn {
+    width: 32px; height: 32px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .zoom-btn:hover { background: var(--bg3); box-shadow: var(--glow); }
+
+  /* Latency bar */
+  .latency-bar {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .latency-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .latency-live {
+    padding: 10px 12px 12px;
+  }
+
+  .latency-live-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .latency-live-value {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent2);
+    font-size: 12px;
+  }
+
+  .latency-live-chart {
+    height: 70px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    border-radius: 3px;
+    padding: 6px 5px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    overflow: hidden;
+  }
+
+  .latency-live-bar {
+    flex: 1;
+    min-width: 4px;
+    border-radius: 2px 2px 0 0;
+    background: rgba(0, 212, 255, 0.6);
+    transition: height 0.35s ease, background 0.25s ease;
+  }
+
+  .latency-live-bar.warn {
+    background: rgba(255, 170, 0, 0.9);
+  }
+
+  .latency-live-bar.spike {
+    background: rgba(255, 51, 85, 0.95);
+  }
+
+  .latency-live-scale {
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--textdim);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .mode-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(9,18,24,0.95), rgba(5,10,15,0.95));
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+
+  .mode-btn {
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--textdim);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .mode-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+    background: rgba(0,212,255,0.08);
+  }
+
+  .dashboard-view {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-view.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-view {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+    background: radial-gradient(circle at top left, rgba(0,212,255,0.06), transparent 36%), var(--bg);
+  }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 14px;
+  }
+
+  .panel-card {
+    background: linear-gradient(180deg, rgba(13,26,36,0.92), rgba(9,18,24,0.92));
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+
+  .panel-card h3 {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--textdim);
+    margin-bottom: 10px;
+  }
+
+  .kpi {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 32px;
+    color: var(--accent2);
+    line-height: 1;
+  }
+
+  .kpi-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--textdim);
+    letter-spacing: 0.8px;
+  }
+
+  .span-3 { grid-column: span 3; }
+  .span-4 { grid-column: span 4; }
+  .span-6 { grid-column: span 6; }
+  .span-8 { grid-column: span 8; }
+  .span-12 { grid-column: span 12; }
+
+  .trend-wrap {
+    height: 170px;
+    border: 1px solid var(--border);
+    background: rgba(5,10,15,0.7);
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  #analytics-health-line {
+    width: 100%;
+    height: 100%;
+  }
+
+  .simple-list {
+    display: grid;
+    gap: 8px;
+    max-height: 260px;
+    overflow: auto;
+  }
+
+  .simple-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(5,10,15,0.6);
+    font-size: 12px;
+  }
+
+  .simple-row .mono {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent);
+  }
+
+  .pill {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 20px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    color: var(--textdim);
+  }
+
+  .pill.info { border-color: var(--accent); color: var(--accent); }
+  .pill.warning { border-color: var(--warn); color: var(--warn); }
+  .pill.error { border-color: var(--danger); color: var(--danger); }
+
+  .settings-grid {
+    display: grid;
+    gap: 12px;
+    max-width: 520px;
+  }
+
+  .settings-row {
+    display: grid;
+    gap: 6px;
+  }
+
+  .settings-row label {
+    font-size: 11px;
+    color: var(--textdim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .settings-row select,
+  .settings-row input,
+  .settings-row button {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 9px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+  }
+
+  .settings-row button {
+    cursor: pointer;
+  }
+
+  .settings-row button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #settings-status {
+    color: var(--textdim);
+    font-size: 12px;
+    min-height: 18px;
+  }
+
+  /* ── PORT SCANNER MODAL ── */
+  .ports-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 10, 15, 0.85);
+    backdrop-filter: blur(3px);
+    z-index: 2000;
+    overflow: auto;
+  }
+
+  .ports-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ports-modal-content {
+    background: linear-gradient(180deg, rgba(13, 26, 36, 0.98), rgba(9, 18, 24, 0.98));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 40px rgba(0, 212, 255, 0.2);
+  }
+
+  .ports-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ports-modal-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+
+  .ports-modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--textdim);
+    font-size: 24px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .ports-modal-close:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .ports-selection {
+    margin-bottom: 20px;
+  }
+
+  .ports-selection label {
+    font-size: 12px;
+    color: var(--textdim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .ports-ip-list {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg3);
+    max-height: 200px;
+    overflow-y: auto;
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    margin-bottom: 16px;
+  }
+
+  .ports-ip-item {
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: rgba(5, 10, 15, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    user-select: none;
+  }
+
+  .ports-ip-item:hover {
+    border-color: var(--accent);
+    background: rgba(0, 212, 255, 0.08);
+    transform: translateX(4px);
+  }
+
+  .ports-ip-item.selected {
+    border-color: var(--accent2);
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--accent2);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.3) inset;
+  }
+
+  .ports-ip-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent2);
+    cursor: pointer;
+  }
+
+  .ports-ip-info {
+    flex: 1;
+  }
+
+  .ports-ip-address {
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .ports-ip-hostname {
+    font-size: 11px;
+    color: var(--textdim);
+  }
+
+  .ports-ip-status {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ports-ip-status.online {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--accent2);
+  }
+
+  .ports-ip-status.offline {
+    background: rgba(255, 51, 85, 0.2);
+    color: var(--danger);
+  }
+
+  .ports-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .recon-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .recon-tab-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: var(--textdim);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .recon-tab-btn:hover {
+    color: var(--accent);
+  }
+
+  .recon-tab-btn.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+  }
+
+  .recon-tab-content {
+    display: none;
+    min-height: 200px;
+  }
+
+  .recon-tab-content.active {
+    display: block;
+  }
+
+  .ports-scan-btn {
+    flex: 1;
+    background: var(--accent2);
+    color: var(--bg);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .ports-scan-btn:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .ports-scan-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ports-scan-btn.scanning {
+    animation: pulse-ports 1s infinite;
+  }
+
+  @keyframes pulse-ports {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .ports-results {
+    background: rgba(5, 10, 15, 0.8);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    min-height: 200px;
+  }
+
+  .ports-results-header {
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--textdim);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ports-results-ip {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .ports-results-time {
+    font-size: 10px;
+    color: var(--textdim);
+  }
+
+  .ports-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .ports-port-item {
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 255, 136, 0.05));
+    border-left: 4px solid var(--accent2);
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .ports-port-item:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.12), rgba(0, 255, 136, 0.1));
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.2);
+    transform: translateX(4px);
+  }
+
+  .ports-port-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .ports-port-status {
+    font-size: 10px;
+    padding: 3px 8px;
+    background: var(--accent2);
+    color: var(--bg);
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ports-empty {
+    text-align: center;
+    color: var(--textdim);
+    padding: 40px 20px;
+    font-size: 12px;
+  }
+
+  .ports-loading {
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 12px;
+    color: var(--accent);
+    animation: pulse-ports 1s infinite;
+  }
+
+  @media (max-width: 1100px) {
+    .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+    .sidebar, .right-panel { width: 220px; }
+  }
+
+  @media (max-width: 900px) {
+    header {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 12px;
+    }
+
+    .header-stats {
+      order: 3;
+      width: 100%;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      min-width: 58px;
+      padding: 4px 10px;
+    }
+
+    .main {
+      flex-direction: column;
+    }
+
+    .sidebar,
+    .right-panel {
+      width: 100%;
+      max-height: 220px;
+      border: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🗺</div>
+    <div>
+      <h1>RealMap</h1>
+      <span>LIVE NETWORK TOPOLOGY ENGINE</span>
+    </div>
+  </div>
+
+  <div class="header-stats">
+    <div class="stat-pill">
+      <span class="val" id="stat-total">—</span>
+      <span class="lbl">Devices</span>
+    </div>
+    <div class="stat-pill">
+      <span class="val green" id="stat-online">—</span>
+      <span class="lbl">Online</span>
+    </div>
+    <div class="stat-pill">
+      <span class="val yellow" id="stat-warn">—</span>
+      <span class="lbl">Warnings</span>
+    </div>
+    <div class="stat-pill">
+      <span class="val" id="stat-latency">—</span>
+      <span class="lbl">Avg ms</span>
+    </div>
+    <div class="stat-pill">
+      <span class="val" id="stat-links">—</span>
+      <span class="lbl">Links</span>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="time-display">Last scan: <span id="last-scan">—</span></div>
+    <div class="health-indicator">
+      <span class="health-label">Network Health:</span>
+      <span class="health-bar" id="health-bar">
+        <span class="health-fill" id="health-fill" style="width: 100%"></span>
+      </span>
+      <span class="health-value" id="health-value">100%</span>
+    </div>
+    <button class="scan-btn" id="scan-btn">⟳ SCAN</button>
+    <button class="scan-btn" id="ports-btn" style="border-color:var(--accent2);color:var(--accent2)">🔌 PORTS</button>
+  </div>
+</header>
+
+<div class="mode-bar" id="mode-bar">
+  <button class="mode-btn active" data-mode="topology">Topology View</button>
+  <button class="mode-btn" data-mode="analytics">Performance</button>
+  <button class="mode-btn" data-mode="alerts">Alerts Center</button>
+  <button class="mode-btn" data-mode="settings">Settings</button>
+</div>
+
+<section class="dashboard-view active" id="view-topology">
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT SIDEBAR: Device List -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">Network Devices</div>
+      <input type="text" id="device-search"
+        placeholder="Search devices..."
+        style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;"
+        oninput="filterDevices(this.value)">
+    </div>
+    <div class="sidebar-section latency-live">
+      <div class="section-title">Latency Live</div>
+      <div class="latency-live-header">
+        <span style="color:var(--textdim);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Avg from Router</span>
+        <span class="latency-live-value" id="latency-live-value">— ms</span>
+      </div>
+      <div class="latency-live-chart" id="latency-live-chart"></div>
+      <div class="latency-live-scale">
+        <span>Older</span>
+        <span>Now</span>
+      </div>
+    </div>
+    <div class="device-list" id="device-list"></div>
+  </div>
+
+  <!-- CENTER: 3D Topology Canvas (Three.js) -->
+  <div class="canvas-area">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div> Router</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4ecdc4"></div> Switch</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#45b7d1"></div> Server</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#96ceb4"></div> Computer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#a29bfe"></div> Device</div>
+    </div>
+
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoom-in-btn">+</button>
+      <button class="zoom-btn" id="zoom-out-btn">−</button>
+      <button class="zoom-btn" id="zoom-reset-btn" style="font-size:12px">⊙</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Alerts + Device Detail -->
+  <div class="right-panel">
+    <div class="sidebar-section">
+      <div class="section-title">Live Alerts</div>
+    </div>
+    <div class="alerts-list" id="alerts-list">
+      <div style="color:var(--textdim);font-size:12px;padding:10px;text-align:center;">Waiting for scan data...</div>
+    </div>
+
+    <div class="detail-panel" id="detail-panel">
+      <div class="section-title">Device Details</div>
+      <div style="color:var(--textdim);font-size:12px;padding:8px 0;">Click a node to inspect</div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<section class="dashboard-view" id="view-analytics">
+  <div class="panel-view">
+    <div class="panel-grid">
+      <div class="panel-card span-3">
+        <h3>Network Health</h3>
+        <div class="kpi" id="analytics-health-now">--%</div>
+        <div class="kpi-sub">Current score from latest scan</div>
+      </div>
+      <div class="panel-card span-3">
+        <h3>Average Latency</h3>
+        <div class="kpi" id="analytics-avg-latency">-- ms</div>
+        <div class="kpi-sub">Rolling value from history window</div>
+      </div>
+      <div class="panel-card span-3">
+        <h3>Online Ratio</h3>
+        <div class="kpi" id="analytics-online-ratio">--%</div>
+        <div class="kpi-sub">Devices online compared to total</div>
+      </div>
+      <div class="panel-card span-3">
+        <h3>Devices Tracked</h3>
+        <div class="kpi" id="analytics-device-count">--</div>
+        <div class="kpi-sub">Current discovered devices</div>
+      </div>
+
+      <div class="panel-card span-8">
+        <h3>Health Trend (Last 24h)</h3>
+        <div class="trend-wrap">
+          <svg id="analytics-health-line" viewBox="0 0 640 180" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <div class="panel-card span-4">
+        <h3>Status Breakdown</h3>
+        <div class="simple-list" id="analytics-status-breakdown"></div>
+      </div>
+
+      <div class="panel-card span-12">
+        <h3>Highest Latency Devices</h3>
+        <div class="simple-list" id="analytics-top-latency"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-view" id="view-alerts">
+  <div class="panel-view">
+    <div class="panel-grid">
+      <div class="panel-card span-4">
+        <h3>Info Alerts</h3>
+        <div class="kpi" id="alerts-info-count">0</div>
+      </div>
+      <div class="panel-card span-4">
+        <h3>Warning Alerts</h3>
+        <div class="kpi" id="alerts-warning-count">0</div>
+      </div>
+      <div class="panel-card span-4">
+        <h3>Error Alerts</h3>
+        <div class="kpi" id="alerts-error-count">0</div>
+      </div>
+
+      <div class="panel-card span-12">
+        <h3>Recent Alerts</h3>
+        <div class="simple-list" id="alerts-center-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-view" id="view-settings">
+  <div class="panel-view">
+    <div class="panel-card" style="max-width:620px;">
+      <h3>Dashboard Configuration</h3>
+      <div class="settings-grid">
+        <div class="settings-row">
+          <label for="scan-interval">Scan Interval</label>
+          <select id="scan-interval">
+            <option value="5">5 seconds</option>
+            <option value="10">10 seconds</option>
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="45">45 seconds</option>
+            <option value="60">60 seconds</option>
+          </select>
+        </div>
+        
+        <div class="settings-row">
+          <button id="save-config-btn" type="button">Save Configuration</button>
+        </div>
+
+        <h3 style="margin-top:20px;padding-top:10px;border-top:1px solid var(--border);">📡 Share Network Data</h3>
+        <p style="color:var(--textdim);font-size:11px;margin-bottom:10px;">Send topology snapshots, alerts, or stats to external systems</p>
+
+        <div class="settings-row">
+          <label for="webhook-url">Target IP or URL</label>
+          <input id="webhook-url" type="text" placeholder="192.168.1.50:5533 or https://api.example.com/webhook" />
+        </div>
+        <div class="settings-row">
+          <label for="send-protocol">Send Method</label>
+          <select id="send-protocol">
+            <option value="udp">UDP Broadcast</option>
+            <option value="http">HTTP Webhook</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <label for="payload-type">Payload Type</label>
+          <select id="payload-type">
+            <option value="topology">Topology Snapshot</option>
+            <option value="alerts">Recent Alerts</option>
+            <option value="stats">Network Stats</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <button id="send-data-btn" type="button">Send Data Now</button>
+        </div>
+
+        <div id="settings-status" style="margin-top:15px;padding:10px;background:#0a1a2a;border-radius:4px;font-size:12px;">Ready to send data.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span><span class="status-dot"></span> LIVE</span>
+  <span>Subnet: <span id="footer-subnet" style="color:var(--accent)">—</span></span>
+  <span>Topology updates every 30s</span>
+  <span id="demo-badge-container"></span>
+  <span style="margin-left:auto">RealMap v1.0 — Network Topology Engine</span>
+</footer>
+
+<!-- PORT SCANNER MODAL -->
+<div class="ports-modal" id="ports-modal">
+  <div class="ports-modal-content">
+    <div class="ports-modal-header">
+      <h2>🔌 Network Reconnaissance</h2>
+      <button class="ports-modal-close" id="ports-modal-close">&times;</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="recon-tabs">
+      <button class="recon-tab-btn active" data-tab="ports-tab">Port Scan</button>
+      <button class="recon-tab-btn" data-tab="services-tab">Services</button>
+      <button class="recon-tab-btn" data-tab="dns-tab">DNS Lookup</button>
+    </div>
+
+    <div class="ports-selection">
+      <label>Select an IP to Scan</label>
+      <div class="ports-ip-list" id="ports-ip-list">
+        <div class="ports-empty">Loading network devices...</div>
+      </div>
+    </div>
+
+    <div class="ports-actions">
+      <button class="ports-scan-btn" id="ports-scan-btn" disabled>⚡ SCAN</button>
+      <button class="ports-scan-btn" id="ports-recon-btn" disabled style="background:linear-gradient(135deg,#ff6b00,#ffaa00)">🔍 DEEP RECON</button>
+    </div>
+
+    <!-- Ports Tab -->
+    <div class="recon-tab-content active" id="ports-tab">
+      <div class="ports-results" id="ports-results">
+        <div class="ports-empty">Select an IP and click SCAN to begin scanning</div>
+      </div>
+    </div>
+
+    <!-- Services Tab -->
+    <div class="recon-tab-content" id="services-tab">
+      <div class="ports-results" id="services-results">
+        <div class="ports-empty">Run DEEP RECON to get service information</div>
+      </div>
+    </div>
+
+    <!-- DNS Tab -->
+    <div class="recon-tab-content" id="dns-tab">
+      <div class="ports-results" id="dns-results">
+        <div class="ports-empty">Enter an IP or hostname to perform DNS lookup</div>
+      </div>
+      <div style="padding:12px;">
+        <input type="text" id="dns-input" placeholder="Enter IP or hostname..." 
+          style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+        <button id="dns-lookup-btn" style="width:100%;margin-top:8px;padding:8px;background:var(--accent2);color:var(--bg);border:none;border-radius:4px;cursor:pointer;font-weight:600;">
+          🔍 Lookup
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+console.log('[RealMap] Script starting...');
+
+// Suppress harmless browser autoplay errors
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason?.name === 'AbortError' && event.reason?.message?.includes('play()')) {
+    event.preventDefault();
+    console.log('[RealMap] Suppressed autoplay error (harmless)');
+  }
+});
+
+// ── STATE ──
+let topologyData = null;
+let selectedNode = null;
+let simulation   = null;
+let svgZoom      = null;
+let allDevices   = [];
+let latencyHistory = [];
+let dashboardMode = 'topology';
+let currentScanInterval = 15;
+
+console.log('[RealMap] State initialized');
+
+// ── SOCKET.IO ──
+console.log('[RealMap] Initializing Socket.IO...');
+const socket = io(window.location.origin, { transports: ['polling'] });
+console.log('[RealMap] Socket.IO instance created');
+
+socket.on('connect', () => {
+  console.log('[RealMap] Socket connected to server');
+  try {
+    addAlert('Connected to RealMap server', 'info');
+  } catch(e) {
+    console.error('[RealMap] Error in connect handler:', e);
+  }
+});
+
+socket.on('disconnect', () => {
+  console.warn('[RealMap] Socket disconnected from server');
+  addAlert('Disconnected from server. Reconnecting...', 'warning');
+});
+
+socket.on('connect_error', (error) => {
+  console.error('[RealMap] Socket connection error:', error);
+  addAlert('Connection error: ' + (error.message || 'Unknown error'), 'error');
+});
+
+socket.on('topology_update', (data) => {
+  console.log('[RealMap] Topology update received', data);
+  topologyData = data;
+  allDevices = data.nodes || [];
+  updateStats(data.stats || {});
+  updateLatencyGraph(data);
+  updateDeviceList(allDevices);
+  renderTopology(data);
+  updateAlerts(data.changes || []);
+  updateHealthScore(data.health || 100);
+  document.getElementById('last-scan').textContent = data.timestamp || '—';
+
+  if (dashboardMode === 'analytics') {
+    renderAnalytics({
+      current: { health: data.health || 0 },
+      history: []
+    });
+    loadAnalyticsPanel();
+  }
+
+  // Re-enable scan button
+  const btn = document.getElementById('scan-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = '⟳ SCAN';
+    btn.classList.remove('scanning');
+  }
+
+  if (data.demo) {
+    document.getElementById('demo-badge-container').innerHTML =
+      '<span class="demo-badge">DEMO DATA</span>';
+    document.getElementById('footer-subnet').textContent = '192.168.1.0/24 (demo)';
+  } else {
+    document.getElementById('demo-badge-container').innerHTML = '';
+  }
+});
+
+socket.on('scan_started', () => {
+  console.log('[RealMap] scan_started event received');
+  const btn = document.getElementById('scan-btn');
+  if (btn) {
+    btn.textContent = '⟳ SCANNING...';
+    btn.classList.add('scanning');
+    btn.disabled = true;
+  }
+  addAlert('Network scan initiated...', 'info');
+});
+
+socket.on('scan_error', (data) => {
+  console.error('[RealMap] Scan error:', data);
+  const btn = document.getElementById('scan-btn');
+  if (btn) {
+    btn.textContent = '⟳ SCAN';
+    btn.classList.remove('scanning');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+  addAlert('Scan error: ' + (data.message || 'Unknown error'), 'error');
+});
+
+socket.on('new_alert', (data) => {
+  console.log('[RealMap] New alert received:', data);
+  const severity = data.severity || 'info';
+  const message = data.message || data.device + ' status changed';
+  addAlert(message, severity);
+  if (dashboardMode === 'alerts') {
+    loadAlertsCenter();
+  }
+});
+
+function triggerScan() {
+  console.log('[RealMap] Scan button clicked, socket.connected:', socket.connected);
+  if (!socket || !socket.connected) {
+    console.error('[RealMap] Socket not connected! Cannot trigger scan.');
+    addAlert('Socket connection lost. Please refresh the page.', 'error');
+    return;
+  }
+  const btn = document.getElementById('scan-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  }
+  console.log('[RealMap] Emitting request_scan event...');
+  socket.emit('request_scan');
+  console.log('[RealMap] request_scan event emitted');
+}
+
+function getDeviceIp(device) {
+  return device?.ip || device?.id || device?.address || '';
+}
+
+function getDisplayHostname(device) {
+  const ip = getDeviceIp(device);
+  const hostname = (device?.hostname || '').trim();
+  if (!hostname || hostname === ip) return ip || '—';
+  return hostname;
+}
+
+function setDashboardMode(mode) {
+  dashboardMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  document.querySelectorAll('.dashboard-view').forEach(view => {
+    view.classList.remove('active');
+  });
+
+  const target = document.getElementById(`view-${mode}`);
+  if (target) target.classList.add('active');
+
+  if (mode === 'analytics') {
+    loadAnalyticsPanel();
+  }
+  if (mode === 'alerts') {
+    loadAlertsCenter();
+  }
+  if (mode === 'settings') {
+    loadConfigPanel();
+  }
+}
+
+async function loadAnalyticsPanel() {
+  try {
+    const response = await fetch('/api/stats?hours=24');
+    const payload = await response.json();
+    renderAnalytics(payload);
+  } catch (err) {
+    console.error('[RealMap] Failed to load analytics panel:', err);
+  }
+}
+
+function renderAnalytics(payload) {
+  const history = payload?.history || [];
+  const current = payload?.current || {};
+  const stats = topologyData?.stats || {};
+  const health = Number(current.health || topologyData?.health || 0);
+  const avgLatency = Number(stats.avg_latency || 0);
+  const total = Number(stats.total_devices || allDevices.length || 0);
+  const online = Number(stats.online || allDevices.filter(d => d.status === 'online').length || 0);
+  const onlineRatio = total ? Math.round((online / total) * 100) : 0;
+
+  const healthNow = document.getElementById('analytics-health-now');
+  const avgLatencyEl = document.getElementById('analytics-avg-latency');
+  const onlineRatioEl = document.getElementById('analytics-online-ratio');
+  const deviceCountEl = document.getElementById('analytics-device-count');
+  if (healthNow) healthNow.textContent = `${health}%`;
+  if (avgLatencyEl) avgLatencyEl.textContent = `${avgLatency} ms`;
+  if (onlineRatioEl) onlineRatioEl.textContent = `${onlineRatio}%`;
+  if (deviceCountEl) deviceCountEl.textContent = `${total}`;
+
+  renderHealthTrend(history);
+  renderStatusBreakdown();
+  renderTopLatency();
+}
+
+function renderHealthTrend(history) {
+  const svg = document.getElementById('analytics-health-line');
+  if (!svg) return;
+  if (!history.length) {
+    svg.innerHTML = '<text x="12" y="28" fill="#4a7a8a" font-size="12">No trend data yet. Run a few scans to populate this chart.</text>';
+    return;
+  }
+
+  const points = history.slice().reverse();
+  const width = 640;
+  const height = 180;
+  const minY = 0;
+  const maxY = 100;
+  const step = points.length > 1 ? width / (points.length - 1) : width;
+
+  const pathData = points.map((item, idx) => {
+    const value = Number(item.network_health || 0);
+    const x = idx * step;
+    const y = height - ((value - minY) / (maxY - minY)) * height;
+    return `${idx === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+
+  svg.innerHTML = `
+    <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="#0f2a38" stroke-width="1"></line>
+    <line x1="0" y1="0" x2="0" y2="${height}" stroke="#0f2a38" stroke-width="1"></line>
+    <path d="${pathData}" fill="none" stroke="#00d4ff" stroke-width="2.6" stroke-linecap="round"></path>
+  `;
+}
+
+function renderStatusBreakdown() {
+  const mount = document.getElementById('analytics-status-breakdown');
+  if (!mount) return;
+  const total = allDevices.length || 0;
+  const online = allDevices.filter(d => d.status === 'online').length;
+  const warning = allDevices.filter(d => d.status === 'warning').length;
+  const offline = allDevices.filter(d => d.status === 'offline').length;
+  const items = [
+    { label: 'Online', value: online, cls: 'info' },
+    { label: 'Warning', value: warning, cls: 'warning' },
+    { label: 'Offline', value: offline, cls: 'error' },
+    { label: 'Total', value: total, cls: 'info' }
+  ];
+
+  mount.innerHTML = items.map(item => `
+    <div class="simple-row">
+      <span>${item.label}</span>
+      <span class="mono">${item.value}</span>
+      <span class="pill ${item.cls}">${total ? Math.round((item.value / total) * 100) : (item.label === 'Total' ? 100 : 0)}%</span>
+    </div>
+  `).join('');
+}
+
+function renderTopLatency() {
+  const mount = document.getElementById('analytics-top-latency');
+  if (!mount) return;
+
+  const top = [...allDevices]
+    .sort((a, b) => Number(b.latency || 0) - Number(a.latency || 0))
+    .slice(0, 8);
+
+  if (!top.length) {
+    mount.innerHTML = '<div class="simple-row"><span>No device data yet</span><span class="mono">--</span><span class="pill info">wait</span></div>';
+    return;
+  }
+
+  mount.innerHTML = top.map(device => {
+    const latency = Number(device.latency || 0);
+    const severity = latency > 80 ? 'error' : latency > 40 ? 'warning' : 'info';
+    return `
+      <div class="simple-row">
+        <span>${getDisplayHostname(device)}</span>
+        <span class="mono">${latency} ms</span>
+        <span class="pill ${severity}">${device.status || 'online'}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadAlertsCenter() {
+  try {
+    const response = await fetch('/api/alerts?limit=100');
+    const alerts = await response.json();
+    renderAlertsCenter(alerts || []);
+  } catch (err) {
+    console.error('[RealMap] Failed to load alerts center:', err);
+  }
+}
+
+function renderAlertsCenter(alerts) {
+  const infoCount = alerts.filter(a => a.severity === 'info').length;
+  const warningCount = alerts.filter(a => a.severity === 'warning').length;
+  const errorCount = alerts.filter(a => a.severity === 'error').length;
+
+  const infoEl = document.getElementById('alerts-info-count');
+  const warningEl = document.getElementById('alerts-warning-count');
+  const errorEl = document.getElementById('alerts-error-count');
+  if (infoEl) infoEl.textContent = String(infoCount);
+  if (warningEl) warningEl.textContent = String(warningCount);
+  if (errorEl) errorEl.textContent = String(errorCount);
+
+  const list = document.getElementById('alerts-center-list');
+  if (!list) return;
+
+  if (!alerts.length) {
+    list.innerHTML = '<div class="simple-row"><span>No alerts found</span><span class="mono">--</span><span class="pill info">clear</span></div>';
+    return;
+  }
+
+  list.innerHTML = alerts.map(alert => `
+    <div class="simple-row">
+      <span>${alert.message || 'Alert'}</span>
+      <span class="mono">${alert.timestamp || '--'}</span>
+      <span class="pill ${alert.severity || 'info'}">${alert.severity || 'info'}</span>
+    </div>
+  `).join('');
+}
+
+async function loadConfigPanel() {
+  const status = document.getElementById('settings-status');
+  try {
+    const response = await fetch('/api/config');
+    const config = await response.json();
+    currentScanInterval = Number(config.scan_interval || currentScanInterval);
+    const select = document.getElementById('scan-interval');
+    if (select) select.value = String(currentScanInterval);
+    const webhookInput = document.getElementById('webhook-url');
+    if (webhookInput) {
+      webhookInput.value = localStorage.getItem('realmap_webhook_url') || '';
+    }
+    const protocolSelect = document.getElementById('send-protocol');
+    if (protocolSelect) {
+      protocolSelect.value = localStorage.getItem('realmap_send_protocol') || 'http';
+    }
+    updateFooterInterval();
+    if (status) status.textContent = `Current interval loaded: ${currentScanInterval} seconds.`;
+  } catch (err) {
+    console.error('[RealMap] Failed to load config:', err);
+    if (status) status.textContent = 'Failed to load configuration from server.';
+  }
+}
+
+async function saveConfigPanel() {
+  const select = document.getElementById('scan-interval');
+  const status = document.getElementById('settings-status');
+  if (!select) return;
+
+  const chosenInterval = Number(select.value || currentScanInterval);
+  try {
+    const response = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scan_interval: chosenInterval })
+    });
+    const result = await response.json();
+    if (result.status === 'updated') {
+      currentScanInterval = Number(result.scan_interval || chosenInterval);
+      updateFooterInterval();
+      if (status) status.textContent = `Saved. Scan interval set to ${currentScanInterval} seconds.`;
+      addAlert(`Scan interval updated to ${currentScanInterval}s`, 'info');
+      return;
+    }
+    if (status) status.textContent = 'Server rejected configuration update.';
+  } catch (err) {
+    console.error('[RealMap] Failed to save config:', err);
+    if (status) status.textContent = 'Failed to save configuration.';
+  }
+}
+
+async function sendDataToWebhook() {
+  const webhookInput = document.getElementById('webhook-url');
+  const payloadTypeSelect = document.getElementById('payload-type');
+  const protocolSelect = document.getElementById('send-protocol');
+  const status = document.getElementById('settings-status');
+
+  const target = (webhookInput?.value || '').trim();
+  const payloadType = (payloadTypeSelect?.value || 'topology').trim();
+  const protocol = (protocolSelect?.value || 'http').trim();
+
+  if (!target) {
+    if (status) status.textContent = `Please enter a target IP or URL for ${protocol.toUpperCase()}.`;
+    return;
+  }
+
+  if (status) status.textContent = `Sending via ${protocol.toUpperCase()}...`;
+
+  try {
+    const response = await fetch('/api/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        webhook_url: target,
+        payload_type: payloadType,
+        protocol: protocol
+      })
+    });
+    const result = await response.json();
+
+    if (response.ok && result.status === 'sent') {
+      localStorage.setItem('realmap_webhook_url', target);
+      localStorage.setItem('realmap_send_protocol', protocol);
+      if (status) {
+        status.textContent = `Sent ${payloadType} via ${protocol.toUpperCase()} to ${result.target || target}.`;
+      }
+      addAlert(`Data sent via ${protocol.toUpperCase()}: ${payloadType}`, 'info');
+      return;
+    }
+
+    if (status) status.textContent = result.message || `Failed to send via ${protocol.toUpperCase()}.`;
+  } catch (err) {
+    console.error('[RealMap] Failed to send data:', err);
+    if (status) status.textContent = `Error sending data via ${protocol.toUpperCase()}.`;
+  }
+}
+
+function updateFooterInterval() {
+  const footer = Array.from(document.querySelectorAll('footer span')).find(el =>
+    (el.textContent || '').toLowerCase().includes('topology updates every')
+  );
+  if (footer) footer.textContent = `Topology updates every ${currentScanInterval}s`;
+}
+
+// ── STATS ──
+function updateStats(stats) {
+  document.getElementById('stat-total').textContent   = stats.total_devices || 0;
+  document.getElementById('stat-online').textContent  = stats.online || 0;
+  document.getElementById('stat-warn').textContent    = (stats.warnings || 0) + (stats.offline || 0);
+  document.getElementById('stat-latency').textContent = stats.avg_latency || 0;
+  document.getElementById('stat-links').textContent   = stats.links_count || 0;
+
+  const btn = document.getElementById('scan-btn');
+  btn.textContent = '⟳ SCAN';
+  btn.classList.remove('scanning');
+}
+
+function updateHealthScore(health) {
+  const healthFill = document.getElementById('health-fill');
+  const healthValue = document.getElementById('health-value');
+  
+  if (healthFill && healthValue) {
+    healthFill.style.width = health + '%';
+    healthValue.textContent = health + '%';
+    
+    // Update color based on health
+    healthFill.classList.remove('warning', 'danger');
+    if (health < 50) {
+      healthFill.classList.add('danger');
+    } else if (health < 75) {
+      healthFill.classList.add('warning');
+    }
+  }
+}
+
+function updateLatencyGraph(data) {
+  const chart = document.getElementById('latency-live-chart');
+  const valueEl = document.getElementById('latency-live-value');
+  if (!chart || !valueEl || !data) return;
+
+  const nodes = data.nodes || [];
+  const links = data.links || [];
+  const router = nodes.find(n => n.type === 'router');
+
+  let avgLatency = Number(data?.stats?.avg_latency || 0);
+  if (router && links.length) {
+    const routerLinks = links.filter(l => {
+      const src = typeof l.source === 'object' ? l.source.ip : l.source;
+      const tgt = typeof l.target === 'object' ? l.target.ip : l.target;
+      return src === router.ip || tgt === router.ip;
+    });
+    if (routerLinks.length) {
+      const total = routerLinks.reduce((sum, l) => sum + Number(l.latency || 0), 0);
+      avgLatency = Number((total / routerLinks.length).toFixed(2));
+    }
+  }
+
+  latencyHistory.push(avgLatency);
+  if (latencyHistory.length > 24) latencyHistory.shift();
+
+  valueEl.textContent = `${avgLatency} ms`;
+
+  const maxValue = Math.max(60, ...latencyHistory);
+  chart.innerHTML = latencyHistory.map((value, idx) => {
+    const previous = idx > 0 ? latencyHistory[idx - 1] : value;
+    const isSpike = idx > 0 && value > (previous * 1.7) && value > 25;
+    const isWarn = !isSpike && value > 50;
+    const pct = Math.max(8, Math.min(100, (value / maxValue) * 100));
+    const barClass = isSpike ? 'latency-live-bar spike' : isWarn ? 'latency-live-bar warn' : 'latency-live-bar';
+    return `<div class="${barClass}" style="height:${pct}%" title="${value} ms"></div>`;
+  }).join('');
+}
+
+// ── DEVICE LIST ──
+function updateDeviceList(devices) {
+  const list = document.getElementById('device-list');
+  list.innerHTML = devices.map(d => {
+    const ip = getDeviceIp(d);
+    const displayName = getDisplayHostname(d);
+    const userName = d.user || d.type || 'Device';
+    const safeIp = (ip || 'unknown').replace(/\./g,'-');
+    return `
+    <div class="device-item" id="dev-${safeIp}" onclick="selectDevice('${ip}')">
+      <div class="device-dot dot-${d.status === 'warning' ? 'warning' : d.status === 'offline' ? 'offline' : 'online'}"></div>
+      <div class="device-info">
+        <div class="device-name">${displayName}</div>
+        <div class="device-ip">${userName}</div>
+        <div class="device-os">${d.os || 'Network Device OS'}</div>
+      </div>
+      <div class="device-lat">${d.latency ? d.latency + 'ms' : '—'}</div>
+    </div>
+  `;
+  }).join('');
+}
+
+function filterDevices(query) {
+  const items = document.querySelectorAll('.device-item');
+  items.forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── ANIMATED BACKGROUND (Three.js) ──
+let bgScene, bgCamera, bgRenderer;
+let bgParticles = [];
+
+function initBackgroundAnimation() {
+  // Check if THREE.js is available
+  if (typeof THREE === 'undefined') {
+    console.warn('[RealMap] THREE.js not loaded, skipping background animation');
+    return;
+  }
+
+  try {
+    const container = document.querySelector('.canvas-area');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    bgScene = new THREE.Scene();
+    bgCamera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    bgCamera.position.z = 100;
+
+    bgRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    bgRenderer.setSize(width, height);
+    bgRenderer.setPixelRatio(window.devicePixelRatio);
+    bgRenderer.domElement.style.position = 'absolute';
+    bgRenderer.domElement.style.left = '0';
+    bgRenderer.domElement.style.top = '0';
+    bgRenderer.domElement.style.zIndex = '0';
+    bgRenderer.domElement.style.pointerEvents = 'none';
+    container.insertBefore(bgRenderer.domElement, container.firstChild);
+
+  // Soft ambient lighting
+  const light = new THREE.PointLight(0x00d4ff, 0.5, 500);
+  light.position.set(100, 100, 50);
+  bgScene.add(light);
+
+  // Create floating particles
+  const particleGeo = new THREE.BufferGeometry();
+  const particleCount = 150;
+  const positions = new Float32Array(particleCount * 3);
+  
+  for (let i = 0; i < particleCount * 3; i += 3) {
+    positions[i] = (Math.random() - 0.5) * 400;
+    positions[i + 1] = (Math.random() - 0.5) * 400;
+    positions[i + 2] = (Math.random() - 0.5) * 400;
+  }
+  
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({
+    color: 0x00d4ff,
+    size: 1.5,
+    sizeAttenuation: true,
+    opacity: 0.5,
+    transparent: true
+  });
+  bgParticles = new THREE.Points(particleGeo, particleMat);
+  bgScene.add(bgParticles);
+
+  // Floating lines
+  for (let i = 0; i < 15; i++) {
+    const lineGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+    for (let j = 0; j < 6; j++) {
+      positions[j] = (Math.random() - 0.5) * 300;
+    }
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x4ecdc4,
+      opacity: 0.15,
+      transparent: true,
+      linewidth: 1
+    });
+    const line = new THREE.Line(lineGeo, lineMat);
+    bgScene.add(line);
+  }
+
+    animateBackground();
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      bgCamera.aspect = w / h;
+      bgCamera.updateProjectionMatrix();
+      bgRenderer.setSize(w, h);
+    });
+    
+    console.log('[RealMap] Background animation initialized');
+  } catch(error) {
+    console.error('[RealMap] Failed to initialize background animation:', error);
+  }
+}
+
+function animateBackground() {
+  if (!bgRenderer || !bgScene || !bgCamera) return;
+  
+  requestAnimationFrame(animateBackground);
+  
+  if (bgParticles && bgParticles.geometry) {
+    const positions = bgParticles.geometry.attributes.position.array;
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i] += (Math.random() - 0.5) * 0.3;
+      positions[i + 1] += (Math.random() - 0.5) * 0.3;
+      positions[i + 2] += (Math.random() - 0.5) * 0.3;
+    }
+    bgParticles.geometry.attributes.position.needsUpdate = true;
+  }
+
+  bgScene.rotation.x += 0.00002;
+  bgScene.rotation.y += 0.00008;
+  
+  bgRenderer.render(bgScene, bgCamera);
+}
+
+// ── 2D D3 TOPOLOGY ──
+const nodeColors = {
+  router:   '#ff6b6b',
+  switch:   '#4ecdc4',
+  server:   '#45b7d1',
+  computer: '#96ceb4',
+  device:   '#a29bfe'
+};
+
+const nodeSize = {
+  router: 20, switch: 18, server: 16, computer: 13, device: 11
+};
+
+function renderTopology(data) {
+  console.log('[RealMap] renderTopology called with data:', data);
+  
+  // Ensure background animation exists (optional, won't block if THREE.js unavailable)
+  const bgCanvas = document.querySelector('.canvas-area canvas');
+  if (!bgCanvas) {
+    console.log('[RealMap] Initializing background animation...');
+    initBackgroundAnimation();
+  }
+
+  const container = document.querySelector('.canvas-area');
+  const width  = container.clientWidth;
+  const height = container.clientHeight;
+  console.log('[RealMap] Container dimensions:', width, 'x', height);
+
+  const svgContainer = document.querySelector('.canvas-area svg');
+  let svg = d3.select('#topology-svg');
+  
+  if (svgContainer === null) {
+    console.log('[RealMap] Creating new SVG element...');
+    const svgElem = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgElem.id = 'topology-svg';
+    svgElem.setAttribute('width', width);
+    svgElem.setAttribute('height', height);
+    svgElem.setAttribute('style', 'position: absolute; z-index: 1; top: 0; left: 0;');
+    container.appendChild(svgElem);
+    svg = d3.select('#topology-svg');
+  } else {
+    // Update dimensions if container changed
+    svg.attr('width', width).attr('height', height);
+  }
+
+  svg.selectAll('*').remove();
+
+  // Setup zoom
+  const g = svg.append('g').attr('class', 'zoom-group');
+  svgZoom = d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(svgZoom);
+
+  const nodes = (data.nodes || []).map(d => {
+    const ip = getDeviceIp(d);
+    return { ...d, ip, id: ip };
+  }).filter(d => d.id);
+  const links = (data.links || []).map(d => ({ ...d }));
+
+  console.log('[RealMap] Processing', nodes.length, 'nodes and', links.length, 'links');
+
+  if (!nodes.length) {
+    console.warn('[RealMap] No nodes to render!');
+    return;
+  }
+
+  // Find and fix router at center
+  const routerNode = nodes.find(n => n.type === 'router');
+  if (routerNode) {
+    routerNode.fx = width / 2;
+    routerNode.fy = height / 2;
+  }
+
+  // Force simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link',    d3.forceLink(links).id(d => d.id).distance(d => 120 + (d.latency || 0) * 1.2))
+    .force('charge',  d3.forceManyBody().strength(-600))
+    .force('center',  d3.forceCenter(width / 2, height / 2))
+    .force('collide', d3.forceCollide().radius(d => (nodeSize[d.type] || 12) + 25));
+
+  // Filters for glow effect
+  const defs = svg.append('defs');
+  ['router','switch','server','computer','device'].forEach(type => {
+    const filter = defs.append('filter').attr('id', `glow-${type}`);
+    filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
+    const merge = filter.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'coloredBlur');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+  });
+
+  // LINKS
+  const linkGroup = g.append('g').attr('class', 'links');
+
+  const link = linkGroup.selectAll('line')
+    .data(links).enter().append('line')
+    .attr('class', 'link-line')
+    .attr('stroke', d => d.status === 'warning' ? '#ffaa00' : '#0f3a50')
+    .attr('stroke-width', d => d.bandwidth > 100 ? 2.5 : d.bandwidth > 10 ? 1.5 : 1);
+
+  // Link latency labels
+  const linkLabel = g.append('g').selectAll('text')
+    .data(links).enter().append('text')
+    .attr('class', 'link-label')
+    .text(d => d.latency ? `${d.latency}ms` : '');
+
+  // NODES
+  const nodeGroup = g.append('g').attr('class', 'nodes');
+
+  const node = nodeGroup.selectAll('g')
+    .data(nodes).enter().append('g')
+    .attr('class', 'node-group')
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag',  dragging)
+      .on('end',   dragEnd)
+    )
+    .on('click', (event, d) => {
+      event.stopPropagation();
+      selectDevice(d.ip);
+    });
+
+  // Outer ring
+  node.append('circle')
+    .attr('r', d => (nodeSize[d.type] || 12) + 6)
+    .attr('fill', 'none')
+    .attr('stroke', d => nodeColors[d.type] || nodeColors.device)
+    .attr('stroke-width', 0.5)
+    .attr('stroke-opacity', 0.3);
+
+  // Main node circle
+  node.append('circle')
+    .attr('class', 'node-circle')
+    .attr('r', d => nodeSize[d.type] || 12)
+    .attr('fill', d => nodeColors[d.type] || nodeColors.device)
+    .attr('fill-opacity', 0.85)
+    .attr('stroke', d => nodeColors[d.type] || nodeColors.device)
+    .attr('stroke-width', 1.5)
+    .attr('filter', d => `url(#glow-${d.type || 'device'})`)
+    .attr('stroke-opacity', d => d.status === 'warning' ? 1 : 0.4);
+
+  // Warning pulse
+  node.filter(d => d.status === 'warning').append('circle')
+    .attr('r', d => (nodeSize[d.type] || 12) + 4)
+    .attr('fill', 'none')
+    .attr('stroke', '#ffaa00')
+    .attr('stroke-width', 1.5)
+    .attr('opacity', 0.7)
+    .style('animation', 'pulse-ring 1.5s infinite');
+
+  // Device type icons
+  const iconMap = { router:'⬡', switch:'◈', server:'▣', computer:'▤', device:'◉' };
+  node.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'middle')
+    .attr('font-size', d => (nodeSize[d.type] || 12) * 0.9)
+    .attr('fill', 'white')
+    .attr('pointer-events', 'none')
+    .text(d => iconMap[d.type] || '●');
+
+  // Hostname label
+  node.append('text')
+    .attr('class', 'node-label')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => (nodeSize[d.type] || 12) + 14)
+    .text(d => {
+      const name = getDisplayHostname(d);
+      return name.length > 14 ? name.substring(0, 14) + '…' : name;
+    });
+
+  // IP label
+  node.append('text')
+    .attr('class', 'node-ip')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => (nodeSize[d.type] || 12) + 26)
+    .text(d => d.user || d.type || '—');
+
+  // Tick update
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  // Deselect on canvas click
+  svg.on('click', () => deselectDevice());
+  
+  console.log('[RealMap] Topology render complete!', nodes.length, 'nodes created');
+}
+
+// ── D3 DRAG & ZOOM ──
+function dragStart(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+
+function dragging(event, d) {
+  d.fx = event.x; d.fy = event.y;
+}
+
+function dragEnd(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+// ── ZOOM CONTROLS (D3) ──
+function zoomIn() {
+  console.log('[RealMap] Zoom in clicked, svgZoom:', svgZoom);
+  if (!svgZoom) {
+    console.warn('[RealMap] Zoom not initialized yet - topology may not be rendered');
+    return;
+  }
+  try {
+    d3.select('#topology-svg').transition().call(svgZoom.scaleBy, 1.4);
+  } catch(e) {
+    console.error('[RealMap] Zoom in error:', e);
+  }
+}
+
+function zoomOut() {
+  console.log('[RealMap] Zoom out clicked, svgZoom:', svgZoom);
+  if (!svgZoom) {
+    console.warn('[RealMap] Zoom not initialized yet - topology may not be rendered');
+    return;
+  }
+  try {
+    d3.select('#topology-svg').transition().call(svgZoom.scaleBy, 0.7);
+  } catch(e) {
+    console.error('[RealMap] Zoom out error:', e);
+  }
+}
+
+function zoomReset() {
+  console.log('[RealMap] Zoom reset clicked, svgZoom:', svgZoom);
+  if (!svgZoom) {
+    console.warn('[RealMap] Zoom not initialized yet - topology may not be rendered');
+    return;
+  }
+  try {
+    d3.select('#topology-svg').transition().call(svgZoom.transform, d3.zoomIdentity);
+  } catch(e) {
+    console.error('[RealMap] Zoom reset error:', e);
+  }
+}
+
+// ── SELECT DEVICE ──
+function selectDevice(ip) {
+  selectedNode = ip;
+
+  // Highlight sidebar
+  document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
+  const sidebarItem = document.getElementById(`dev-${ip.replace(/\./g,'-')}`);
+  if (sidebarItem) sidebarItem.classList.add('selected');
+
+  // Find device data
+  if (!topologyData) return;
+  const device = topologyData.nodes.find(d => d.ip === ip);
+  if (!device) return;
+
+  // Update detail panel
+  const links = (topologyData.links || []).filter(l =>
+    l.source === ip || l.target === ip ||
+    l.source?.ip === ip || l.target?.ip === ip
+  );
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="section-title">Device Details</div>
+    <div class="detail-row">
+      <span class="detail-label">User/Owner</span>
+      <span class="detail-value">${device.user || device.type || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">IP</span>
+      <span class="detail-value">${device.ip}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">MAC</span>
+      <span class="detail-value">${device.mac || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Hostname</span>
+      <span class="detail-value">${(device.hostname || '—').substring(0,20)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Type</span>
+      <span class="detail-value" style="text-transform:uppercase">${device.type || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">OS</span>
+      <span class="detail-value">${(device.os || 'Unknown').substring(0,20)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Latency</span>
+      <span class="detail-value" style="color:${(device.latency||0) > 50 ? 'var(--warn)' : 'var(--accent2)'}">${device.latency || 0} ms</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Status</span>
+      <span class="detail-value" style="color:${device.status === 'online' ? 'var(--accent2)' : 'var(--warn)'}">${(device.status || 'unknown').toUpperCase()}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Links</span>
+      <span class="detail-value">${links.length} connection(s)</span>
+    </div>
+    <div style="margin-top:10px">
+      <div class="detail-label" style="margin-bottom:6px">Latency Indicator</div>
+      <div class="latency-bar">
+        <div class="latency-fill" style="width:${Math.min((device.latency||0)/100*100,100)}%;background:${(device.latency||0)>50?'var(--warn)':'var(--accent2)'}"></div>
+      </div>
+    </div>
+  `;
+}
+
+function deselectDevice() {
+  selectedNode = null;
+  document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
+}
+
+// ── ALERTS ──
+function updateAlerts(changes) {
+  if (!changes || !changes.length) return;
+  changes.forEach(change => addAlert(change.message, change.severity || 'info', change.timestamp));
+}
+
+function addAlert(message, severity = 'info', timestamp = null) {
+  const list = document.getElementById('alerts-list');
+  const time = timestamp || new Date().toLocaleTimeString();
+
+  // Remove placeholder
+  const placeholder = list.querySelector('div[style*="text-align:center"]');
+  if (placeholder) placeholder.remove();
+
+  const item = document.createElement('div');
+  item.className = `alert-item ${severity}`;
+  item.innerHTML = `
+    <div class="alert-msg">${message}</div>
+    <div class="alert-time">${time}</div>
+  `;
+
+  list.insertBefore(item, list.firstChild);
+
+  // Keep max 20 alerts
+  while (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
+// ── INIT ──
+console.log('[RealMap] Starting initialization...');
+
+// Wait for DOM to fully load before attaching events
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
+function initApp() {
+  console.log('[RealMap] DOM ready, attaching event listeners...');
+  
+  // Attach event listeners
+  const scanBtn = document.getElementById('scan-btn');
+  const zoomInBtn = document.getElementById('zoom-in-btn');
+  const zoomOutBtn = document.getElementById('zoom-out-btn');
+  const zoomResetBtn = document.getElementById('zoom-reset-btn');
+  
+  if (scanBtn) {
+    scanBtn.addEventListener('click', triggerScan);
+    console.log('[RealMap] Scan button listener attached');
+  } else {
+    console.error('[RealMap] Scan button not found!');
+  }
+  
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener('click', zoomIn);
+    console.log('[RealMap] Zoom in button listener attached');
+  } else {
+    console.error('[RealMap] Zoom in button not found!');
+  }
+  
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener('click', zoomOut);
+    console.log('[RealMap] Zoom out button listener attached');
+  } else {
+    console.error('[RealMap] Zoom out button not found!');
+  }
+  
+  if (zoomResetBtn) {
+    zoomResetBtn.addEventListener('click', zoomReset);
+    console.log('[RealMap] Zoom reset button listener attached');
+  } else {
+    console.error('[RealMap] Zoom reset button not found!');
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDashboardMode(btn.dataset.mode));
+  });
+
+  const saveConfigBtn = document.getElementById('save-config-btn');
+  if (saveConfigBtn) {
+    saveConfigBtn.addEventListener('click', saveConfigPanel);
+  }
+
+  const sendDataBtn = document.getElementById('send-data-btn');
+  if (sendDataBtn) {
+    sendDataBtn.addEventListener('click', sendDataToWebhook);
+  }
+
+  updateFooterInterval();
+  loadConfigPanel();
+  
+  // Fetch initial topology
+  fetchInitialTopology();
+}
+
+function fetchInitialTopology() {
+  console.log('[RealMap] Fetching initial topology from /api/topology...');
+  fetch('/api/topology')
+  .then(r => {
+    console.log('[RealMap] Received response:', r.status);
+    return r.json();
+  })
+  .then(data => {
+    console.log('[RealMap] Topology data received:', data);
+    if (data && !topologyData) {
+      topologyData = data;
+      allDevices = data.nodes || [];
+      console.log('[RealMap] Processing', allDevices.length, 'devices');
+      updateStats(data.stats || {});
+      updateLatencyGraph(data);
+      updateDeviceList(allDevices);
+      renderTopology(data);
+      document.getElementById('last-scan').textContent = data.timestamp || '—';
+      if (data.demo) {
+        document.getElementById('demo-badge-container').innerHTML =
+          '<span class="demo-badge">DEMO DATA</span>';
+        document.getElementById('footer-subnet').textContent = '192.168.1.0/24 (demo)';
+      }
+      console.log('[RealMap] Initial topology rendered');
+    }
+  })
+  .catch(err => {
+    console.error('[RealMap] REST fetch error:', err);
+  });
+}
+
+// Live clock
+setInterval(() => {
+  document.querySelector('.time-display') &&
+    (document.querySelector('.time-display').innerHTML =
+      `Last scan: <span id="last-scan">${document.getElementById('last-scan')?.textContent || '—'}</span>`);
+}, 1000);
+
+// Responsive resize
+window.addEventListener('resize', () => {
+  if (topologyData) renderTopology(topologyData);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── PORT SCANNER FUNCTIONALITY ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let selectedPortIP = null;
+const portsModal = document.getElementById('ports-modal');
+const portsBtn = document.getElementById('ports-btn');
+const portsModalClose = document.getElementById('ports-modal-close');
+const portsIPList = document.getElementById('ports-ip-list');
+const portsScanBtn = document.getElementById('ports-scan-btn');
+const portsResults = document.getElementById('ports-results');
+const portsReconBtn = document.getElementById('ports-recon-btn');
+const servicesResults = document.getElementById('services-results');
+const dnsResults = document.getElementById('dns-results');
+const dnsInput = document.getElementById('dns-input');
+const dnsLookupBtn = document.getElementById('dns-lookup-btn');
+
+// Tab functionality
+document.querySelectorAll('.recon-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.dataset.tab;
+    
+    // Update button styles
+    document.querySelectorAll('.recon-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Update content visibility
+    document.querySelectorAll('.recon-tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+  });
+});
+
+// DNS Lookup functionality
+dnsLookupBtn.addEventListener('click', async () => {
+  const target = dnsInput.value.trim();
+  if (!target) {
+    dnsResults.innerHTML = '<div class="ports-empty">Please enter an IP address or hostname</div>';
+    return;
+  }
+  
+  dnsResults.innerHTML = '<div class="ports-loading">🔍 Looking up DNS information...</div>';
+  
+  const info = await getDNSInfo(target);
+  if (info) {
+    let html = `<div style="padding:12px;">`;
+    html += `<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:8px;">DNS Information for ${target}</div>`;
+    
+    if (info.ip) {
+      html += `<div style="margin:8px 0;color:var(--text);"><strong>IP Address:</strong> ${info.ip}</div>`;
+    }
+    if (info.a_records && info.a_records.length > 0) {
+      html += `<div style="margin:8px 0;color:var(--text);"><strong>A Records:</strong> ${info.a_records.join(', ')}</div>`;
+    }
+    if (info.reverse) {
+      html += `<div style="margin:8px 0;color:var(--text);"><strong>Reverse DNS:</strong> ${info.reverse}</div>`;
+    }
+    if (!info.ip && !info.a_records.length && !info.reverse) {
+      html += `<div style="color:var(--textdim);margin:8px 0;">No DNS records found for this target</div>`;
+    }
+    
+    html += `</div>`;
+    dnsResults.innerHTML = html;
+  } else {
+    dnsResults.innerHTML = '<div class="ports-empty">❌ DNS lookup failed. Please check the target.</div>';
+  }
+});
+
+// Open port scanner modal
+portsBtn.addEventListener('click', () => {
+  portsModal.classList.add('active');
+  loadPortsIPList();
+});
+
+// Close port scanner modal
+portsModalClose.addEventListener('click', () => {
+  portsModal.classList.remove('active');
+});
+
+// Close modal when clicking outside
+portsModal.addEventListener('click', (e) => {
+  if (e.target === portsModal) {
+    portsModal.classList.remove('active');
+  }
+});
+
+// Load list of available IPs
+async function loadPortsIPList() {
+  try {
+    selectedPortIP = null;
+    portsScanBtn.disabled = true;
+    portsReconBtn.disabled = true;
+    portsIPList.innerHTML = '<div class="ports-loading">⚡ Loading network devices...</div>';
+    
+    const response = await fetch('/api/ips');
+    const data = await response.json();
+    
+    if (data.status === 'success' && data.ips.length > 0) {
+      portsIPList.innerHTML = '';
+      data.ips.forEach(ip => {
+        const item = document.createElement('div');
+        item.className = 'ports-ip-item';
+        item.innerHTML = `
+          <input type="radio" name="port-ip" value="${ip.ip}" class="ports-ip-checkbox" id="ip-${ip.ip}">
+          <div class="ports-ip-info">
+            <div class="ports-ip-address">${ip.ip}</div>
+            <div class="ports-ip-hostname">${ip.hostname}</div>
+          </div>
+          <span class="ports-ip-status ${ip.status}">${ip.status}</span>
+        `;
+        
+        // Make entire item clickable
+        item.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'INPUT') {
+            const input = item.querySelector('input');
+            input.checked = true;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        
+        // Handle radio button change
+        const input = item.querySelector('input');
+        input.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            selectedPortIP = ip.ip;
+            document.querySelectorAll('.ports-ip-item').forEach(el => {
+              el.classList.remove('selected');
+              el.querySelector('input').checked = false;
+            });
+            item.classList.add('selected');
+            input.checked = true;
+            portsScanBtn.disabled = false;
+            portsReconBtn.disabled = false;
+            console.log('[RealMap] Selected IP for port scan:', selectedPortIP);
+          }
+        });
+        
+        portsIPList.appendChild(item);
+      });
+    } else {
+      portsIPList.innerHTML = '<div class="ports-empty">No devices found. Please run a network scan first.</div>';
+      portsScanBtn.disabled = true;
+      portsReconBtn.disabled = true;
+    }
+  } catch (error) {
+    console.error('[RealMap] Error loading IPs:', error);
+    portsIPList.innerHTML = '<div class="ports-empty">Error loading devices. Please try again.</div>';
+    portsScanBtn.disabled = true;
+    portsReconBtn.disabled = true;
+  }
+}
+
+// Scan ports on selected IP
+portsScanBtn.addEventListener('click', async () => {
+  if (!selectedPortIP) {
+    addAlert('Please select an IP address first', 'warning');
+    return;
+  }
+  
+  await scanPorts(selectedPortIP);
+});
+
+// Deep recon on selected IP
+portsReconBtn.addEventListener('click', async () => {
+  if (!selectedPortIP) {
+    addAlert('Please select an IP address first', 'warning');
+    return;
+  }
+  
+  await deepRecon(selectedPortIP);
+});
+
+async function deepRecon(ip) {
+  try {
+    portsReconBtn.disabled = true;
+    portsReconBtn.classList.add('scanning');
+    portsReconBtn.textContent = '🔍 SCANNING...';
+    
+    servicesResults.innerHTML = `<div class="ports-loading">🔎 Running deep reconnaissance on ${ip}...</div>`;
+    
+    const data = await getReconInfo(ip);
+    
+    if (data && data.status === 'success') {
+      displayServicesResults(data);
+    } else {
+      const errorMessage = (data && data.message) ? data.message : 'Failed to perform reconnaissance.';
+      servicesResults.innerHTML = `
+        <div style="padding:24px;text-align:center;">
+          <div style="font-size:24px;margin-bottom:8px;">⚠️</div>
+          <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Recon Error</div>
+          <div style="color:var(--textdim);font-size:11px;">
+            ${errorMessage}
+          </div>
+        </div>
+      `;
+    }
+    
+    // Switch to services tab
+    document.querySelectorAll('.recon-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="services-tab"]').classList.add('active');
+    document.querySelectorAll('.recon-tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('services-tab').classList.add('active');
+    
+  } catch (error) {
+    console.error('[RealMap] Recon error:', error);
+    servicesResults.innerHTML = `
+      <div style="padding:24px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">❌</div>
+        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Connection Error</div>
+        <div style="color:var(--textdim);font-size:11px;">
+          Failed to perform reconnaissance.
+        </div>
+      </div>
+    `;
+  } finally {
+    portsReconBtn.disabled = false;
+    portsReconBtn.classList.remove('scanning');
+    portsReconBtn.textContent = '🔍 DEEP RECON';
+  }
+}
+
+function displayServicesResults(data) {
+  const { ip, open_ports, services } = data;
+  
+  let html = `
+    <div class="ports-results-header" style="padding:12px;">
+      <div>
+        <div>📍 Target IP</div>
+        <div class="ports-results-ip">${ip}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="color:var(--accent2);font-weight:600;font-size:14px;">
+          🔓 ${open_ports.length} port${open_ports.length !== 1 ? 's' : ''} open
+        </div>
+      </div>
+    </div>
+  `;
+  
+  if (open_ports.length > 0) {
+    html += `<div style="padding:0 12px;margin-top:12px;">`;
+    
+    open_ports.forEach(port => {
+      const serviceInfo = services[port];
+      html += `
+        <div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:4px;padding:12px;margin-bottom:12px;">
+          <div style="color:var(--accent);font-weight:600;font-size:13px;margin-bottom:8px;">🔓 PORT ${port}</div>
+      `;
+      
+      if (serviceInfo && serviceInfo.banner) {
+        html += `
+          <div style="background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;font-family:monospace;font-size:10px;color:var(--accent2);margin:8px 0;overflow:auto;max-height:80px;">
+            ${serviceInfo.banner}
+          </div>
+        `;
+      }
+      
+      if (serviceInfo && serviceInfo.ssl_info) {
+        html += formatSSLInfo(serviceInfo.ssl_info);
+      }
+      
+      html += `</div>`;
+    });
+    
+    html += `</div>`;
+  } else {
+    html += `
+      <div style="padding:24px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">No Open Ports Found</div>
+      </div>
+    `;
+  }
+  
+  servicesResults.innerHTML = html;
+}
+
+async function scanPorts(ip) {
+  try {
+    portsScanBtn.disabled = true;
+    portsScanBtn.classList.add('scanning');
+    portsScanBtn.textContent = '⚡ SCANNING...';
+    
+    // Get device info
+    const ipListItems = document.querySelectorAll('.ports-ip-item');
+    let deviceName = 'Unknown';
+    ipListItems.forEach(item => {
+      if (item.querySelector('input').value === ip) {
+        deviceName = item.querySelector('.ports-ip-hostname').textContent;
+      }
+    });
+    
+    portsResults.innerHTML = `<div class="ports-loading">🔍 Scanning ports on ${ip} (${deviceName})...</div>`;
+    
+    const response = await fetch(`/api/ports/${ip}`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      displayPortResults(data);
+    } else {
+      portsResults.innerHTML = `
+        <div style="padding:24px;text-align:center;">
+          <div style="font-size:24px;margin-bottom:8px;">⚠️</div>
+          <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Scan Error</div>
+          <div style="color:var(--textdim);font-size:11px;">
+            ${data.message || 'Failed to scan the device. Check if the IP is reachable.'}
+          </div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('[RealMap] Port scan error:', error);
+    portsResults.innerHTML = `
+      <div style="padding:24px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">❌</div>
+        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Connection Error</div>
+        <div style="color:var(--textdim);font-size:11px;">
+          Failed to connect to scan service. Please check your network connection.
+        </div>
+      </div>
+    `;
+  } finally {
+    portsScanBtn.disabled = false;
+    portsScanBtn.classList.remove('scanning');
+    portsScanBtn.textContent = '⚡ SCAN';
+  }
+}
+
+// Display port scan results
+function displayPortResults(data) {
+  const { ip, open_ports, timestamp } = data;
+  
+  // Service details mapping
+  const serviceDetails = {
+    21: { name: 'FTP', description: 'File Transfer Protocol - File sharing' },
+    22: { name: 'SSH', description: 'Secure Shell - Remote access' },
+    23: { name: 'Telnet', description: 'Unencrypted remote access (Legacy)' },
+    25: { name: 'SMTP', description: 'Simple Mail Transfer Protocol - Email' },
+    53: { name: 'DNS', description: 'Domain Name System - Network resolution' },
+    80: { name: 'HTTP', description: 'Hypertext Transfer Protocol - Web' },
+    110: { name: 'POP3', description: 'Post Office Protocol - Email retrieval' },
+    143: { name: 'IMAP', description: 'Internet Message Access Protocol - Email' },
+    443: { name: 'HTTPS', description: 'Secure HTTP - Encrypted web' },
+    445: { name: 'SMB', description: 'Server Message Block - File/printer sharing' },
+    3306: { name: 'MySQL', description: 'MySQL Database Server' },
+    3389: { name: 'RDP', description: 'Remote Desktop Protocol - Windows remote' },
+    5432: { name: 'PostgreSQL', description: 'PostgreSQL Database Server' },
+    5900: { name: 'VNC', description: 'Virtual Network Computing - Remote desktop' },
+    8080: { name: 'HTTP-Alt', description: 'Alternate HTTP - Web services' },
+    8443: { name: 'HTTPS-Alt', description: 'Alternate HTTPS - Secure web services' },
+    9000: { name: 'Custom', description: 'Custom application port' }
+  };
+  
+  let html = `
+    <div class="ports-results-header">
+      <div>
+        <div>📍 Target IP</div>
+        <div class="ports-results-ip">${ip}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="ports-results-time">${timestamp}</div>
+        <div style="color:var(--accent2);font-weight:600;font-size:14px;margin-top:4px;">
+          🔓 ${open_ports.length} port${open_ports.length !== 1 ? 's' : ''} open
+        </div>
+      </div>
+    </div>
+  `;
+  
+  if (open_ports.length > 0) {
+    html += `
+      <div style="margin-top:16px;">
+        <div style="font-size:11px;color:var(--textdim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">📡 Available Services</div>
+        <div class="ports-list">
+    `;
+    
+    open_ports.forEach(port => {
+      const service = serviceDetails[port] || { name: 'Unknown', description: 'Unknown service' };
+      html += `
+        <div class="ports-port-item">
+          <div style="flex:1;">
+            <div class="ports-port-number">PORT ${port}</div>
+            <div style="color:var(--accent2);font-weight:600;font-size:12px;margin-top:2px;">${service.name}</div>
+            <div style="font-size:11px;color:var(--textdim);margin-top:3px;">${service.description}</div>
+          </div>
+          <div class="ports-port-status">OPEN</div>
+        </div>
+      `;
+    });
+    
+    html += `
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:4px;font-size:11px;color:var(--textdim);">
+        ✓ Found ${open_ports.length} accessible service${open_ports.length !== 1 ? 's' : ''} on this device
+      </div>
+    `;
+  } else {
+    html += `
+      <div style="margin-top:16px;padding:24px;text-align:center;background:rgba(5,10,15,0.8);border:1px solid var(--border);border-radius:4px;">
+        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">No Open Ports Found</div>
+        <div style="color:var(--textdim);font-size:11px;">
+          This device either:<br>
+          • Has no services running on common ports<br>
+          • Has firewall protection enabled<br>
+          • Is offline or unreachable<br>
+          • Blocking port scan attempts
+        </div>
+      </div>
+    `;
+  }
+  
+  portsResults.innerHTML = html;
+}
+
+console.log('[RealMap] Port Scanner module loaded');
+
+// Advanced reconnaissance functions
+async function getServiceInfo(ip, port) {
+  try {
+    const response = await fetch(`/api/service-enum/${ip}/${port}`);
+    const data = await response.json();
+    return data.service_info || null;
+  } catch (error) {
+    console.error('[RealMap] Service enum error:', error);
+    return null;
+  }
+}
+
+async function getReconInfo(ip) {
+  try {
+    // Try query-style endpoint first.
+    let response = await fetch(`/api/recon?target=${encodeURIComponent(ip)}`);
+    let data = null;
+
+    if (response.ok) {
+      data = await response.json();
+      if (data && data.status === 'success') {
+        return data;
+      }
+    }
+
+    // Fallback for older backend shape that only supports path-style endpoint.
+    response = await fetch(`/api/recon/${encodeURIComponent(ip)}`);
+    if (!response.ok) {
+      return {
+        status: 'error',
+        message: `Recon endpoint unavailable (${response.status}). Restart backend and try again.`
+      };
+    }
+
+    data = await response.json();
+    if (!data || data.status !== 'success') {
+      return {
+        status: 'error',
+        message: (data && data.message) ? data.message : 'Recon response was not successful.'
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[RealMap] Recon error:', error);
+    return {
+      status: 'error',
+      message: 'Network error while running deep recon.'
+    };
+  }
+}
+
+async function getDNSInfo(target) {
+  try {
+    const response = await fetch(`/api/dns?target=${encodeURIComponent(target)}`);
+    const data = await response.json();
+    if (!response.ok || data.status !== 'success') {
+      return null;
+    }
+    return data.data || null;
+  } catch (error) {
+    console.error('[RealMap] DNS error:', error);
+    return null;
+  }
+}
+
+// Format SSL certificate info
+function formatSSLInfo(sslData) {
+  if (!sslData) return '<div style="color:var(--textdim);font-size:11px;">No SSL/TLS detected</div>';
+  
+  let html = `
+    <div style="background:rgba(0,212,255,0.08);padding:12px;border-radius:4px;font-size:11px;">
+      <div style="color:var(--accent);margin-bottom:8px;font-weight:600;">🔐 SSL/TLS Info</div>
+      <div style="color:var(--textdim);line-height:1.6;">
+        <div>Protocol: <span style="color:var(--text);">${sslData.protocol || 'Unknown'}</span></div>
+        <div>Cipher: <span style="color:var(--text);">${sslData.cipher || 'Unknown'}</span></div>
+        ${sslData.valid_from ? `<div>Valid From: <span style="color:var(--text);">${sslData.valid_from}</span></div>` : ''}
+        ${sslData.valid_until ? `<div>Valid Until: <span style="color:var(--text);">${sslData.valid_until}</span></div>` : ''}
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+console.log('[RealMap] Script fully loaded and initialized');
+</script>
+</body>
+</html>

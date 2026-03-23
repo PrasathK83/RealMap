@@ -1,0 +1,8 @@
+flask==3.0.0
+flask-socketio==5.3.6
+flask-cors==4.0.0
+eventlet==0.35.1
+networkx==3.2.1
+scapy==2.5.0
+python-nmap==0.7.1
+requests==2.31.0

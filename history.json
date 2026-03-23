@@ -1,0 +1,702 @@
+[
+  {
+    "timestamp": "10:37:42",
+    "date": "2026-03-14 10:37:42",
+    "total_devices": 63,
+    "avg_latency": 34.35,
+    "changes": 25
+  },
+  {
+    "timestamp": "15:05:31",
+    "date": "2026-03-23 15:05:31",
+    "total_devices": 79,
+    "avg_latency": 39.61,
+    "changes": 96
+  },
+  {
+    "timestamp": "15:06:24",
+    "date": "2026-03-23 15:06:24",
+    "total_devices": 79,
+    "avg_latency": 33.87,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:07:15",
+    "date": "2026-03-23 15:07:15",
+    "total_devices": 74,
+    "avg_latency": 21.12,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:08:06",
+    "date": "2026-03-23 15:08:06",
+    "total_devices": 73,
+    "avg_latency": 39.29,
+    "changes": 16
+  },
+  {
+    "timestamp": "15:08:56",
+    "date": "2026-03-23 15:08:56",
+    "total_devices": 76,
+    "avg_latency": 42.5,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:09:34",
+    "date": "2026-03-23 15:09:34",
+    "total_devices": 36,
+    "avg_latency": 29.54,
+    "changes": 45
+  },
+  {
+    "timestamp": "15:10:25",
+    "date": "2026-03-23 15:10:25",
+    "total_devices": 73,
+    "avg_latency": 41.58,
+    "changes": 48
+  },
+  {
+    "timestamp": "15:11:16",
+    "date": "2026-03-23 15:11:16",
+    "total_devices": 78,
+    "avg_latency": 28.76,
+    "changes": 13
+  },
+  {
+    "timestamp": "15:12:08",
+    "date": "2026-03-23 15:12:08",
+    "total_devices": 76,
+    "avg_latency": 42.1,
+    "changes": 15
+  },
+  {
+    "timestamp": "15:12:43",
+    "date": "2026-03-23 15:12:43",
+    "total_devices": 26,
+    "avg_latency": 13.39,
+    "changes": 52
+  },
+  {
+    "timestamp": "15:13:36",
+    "date": "2026-03-23 15:13:36",
+    "total_devices": 79,
+    "avg_latency": 30.13,
+    "changes": 55
+  },
+  {
+    "timestamp": "15:14:29",
+    "date": "2026-03-23 15:14:29",
+    "total_devices": 77,
+    "avg_latency": 40.63,
+    "changes": 13
+  },
+  {
+    "timestamp": "15:15:11",
+    "date": "2026-03-23 15:15:11",
+    "total_devices": 48,
+    "avg_latency": 27.24,
+    "changes": 34
+  },
+  {
+    "timestamp": "15:16:03",
+    "date": "2026-03-23 15:16:03",
+    "total_devices": 77,
+    "avg_latency": 37.16,
+    "changes": 38
+  },
+  {
+    "timestamp": "15:16:55",
+    "date": "2026-03-23 15:16:55",
+    "total_devices": 75,
+    "avg_latency": 45.02,
+    "changes": 18
+  },
+  {
+    "timestamp": "15:17:46",
+    "date": "2026-03-23 15:17:46",
+    "total_devices": 75,
+    "avg_latency": 52.71,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:18:36",
+    "date": "2026-03-23 15:18:36",
+    "total_devices": 74,
+    "avg_latency": 46.87,
+    "changes": 16
+  },
+  {
+    "timestamp": "15:19:21",
+    "date": "2026-03-23 15:19:21",
+    "total_devices": 56,
+    "avg_latency": 42.23,
+    "changes": 25
+  },
+  {
+    "timestamp": "15:20:12",
+    "date": "2026-03-23 15:20:12",
+    "total_devices": 77,
+    "avg_latency": 51.87,
+    "changes": 43
+  },
+  {
+    "timestamp": "15:20:59",
+    "date": "2026-03-23 15:20:59",
+    "total_devices": 64,
+    "avg_latency": 57.35,
+    "changes": 20
+  },
+  {
+    "timestamp": "15:21:48",
+    "date": "2026-03-23 15:21:48",
+    "total_devices": 65,
+    "avg_latency": 22.7,
+    "changes": 18
+  },
+  {
+    "timestamp": "15:22:33",
+    "date": "2026-03-23 15:22:33",
+    "total_devices": 60,
+    "avg_latency": 48.29,
+    "changes": 21
+  },
+  {
+    "timestamp": "15:23:21",
+    "date": "2026-03-23 15:23:21",
+    "total_devices": 62,
+    "avg_latency": 16.94,
+    "changes": 14
+  },
+  {
+    "timestamp": "15:24:11",
+    "date": "2026-03-23 15:24:11",
+    "total_devices": 65,
+    "avg_latency": 17.95,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:24:43",
+    "date": "2026-03-23 15:24:43",
+    "total_devices": 9,
+    "avg_latency": 4.31,
+    "changes": 56
+  },
+  {
+    "timestamp": "15:25:33",
+    "date": "2026-03-23 15:25:33",
+    "total_devices": 67,
+    "avg_latency": 37.59,
+    "changes": 58
+  },
+  {
+    "timestamp": "15:26:19",
+    "date": "2026-03-23 15:26:19",
+    "total_devices": 61,
+    "avg_latency": 28.44,
+    "changes": 20
+  },
+  {
+    "timestamp": "15:26:58",
+    "date": "2026-03-23 15:26:58",
+    "total_devices": 41,
+    "avg_latency": 254.02,
+    "changes": 47
+  },
+  {
+    "timestamp": "15:27:40",
+    "date": "2026-03-23 15:27:40",
+    "total_devices": 53,
+    "avg_latency": 17.1,
+    "changes": 27
+  },
+  {
+    "timestamp": "15:28:28",
+    "date": "2026-03-23 15:28:28",
+    "total_devices": 68,
+    "avg_latency": 50.67,
+    "changes": 19
+  },
+  {
+    "timestamp": "15:29:06",
+    "date": "2026-03-23 15:29:06",
+    "total_devices": 24,
+    "avg_latency": 12.53,
+    "changes": 44
+  },
+  {
+    "timestamp": "15:29:49",
+    "date": "2026-03-23 15:29:49",
+    "total_devices": 56,
+    "avg_latency": 28.73,
+    "changes": 35
+  },
+  {
+    "timestamp": "15:30:36",
+    "date": "2026-03-23 15:30:36",
+    "total_devices": 63,
+    "avg_latency": 57.95,
+    "changes": 27
+  },
+  {
+    "timestamp": "15:31:24",
+    "date": "2026-03-23 15:31:24",
+    "total_devices": 63,
+    "avg_latency": 38.78,
+    "changes": 13
+  },
+  {
+    "timestamp": "15:32:07",
+    "date": "2026-03-23 15:32:08",
+    "total_devices": 55,
+    "avg_latency": 32.43,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:32:50",
+    "date": "2026-03-23 15:32:50",
+    "total_devices": 52,
+    "avg_latency": 29.9,
+    "changes": 23
+  },
+  {
+    "timestamp": "15:33:36",
+    "date": "2026-03-23 15:33:36",
+    "total_devices": 60,
+    "avg_latency": 27.19,
+    "changes": 20
+  },
+  {
+    "timestamp": "15:34:21",
+    "date": "2026-03-23 15:34:21",
+    "total_devices": 60,
+    "avg_latency": 43.85,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:35:08",
+    "date": "2026-03-23 15:35:08",
+    "total_devices": 66,
+    "avg_latency": 31.26,
+    "changes": 19
+  },
+  {
+    "timestamp": "15:35:56",
+    "date": "2026-03-23 15:35:56",
+    "total_devices": 66,
+    "avg_latency": 39.26,
+    "changes": 21
+  },
+  {
+    "timestamp": "15:36:41",
+    "date": "2026-03-23 15:36:41",
+    "total_devices": 58,
+    "avg_latency": 21.84,
+    "changes": 21
+  },
+  {
+    "timestamp": "15:37:24",
+    "date": "2026-03-23 15:37:24",
+    "total_devices": 58,
+    "avg_latency": 29.56,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:38:07",
+    "date": "2026-03-23 15:38:07",
+    "total_devices": 56,
+    "avg_latency": 12.77,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:38:53",
+    "date": "2026-03-23 15:38:53",
+    "total_devices": 61,
+    "avg_latency": 20.1,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:39:39",
+    "date": "2026-03-23 15:39:39",
+    "total_devices": 60,
+    "avg_latency": 33.53,
+    "changes": 21
+  },
+  {
+    "timestamp": "15:40:23",
+    "date": "2026-03-23 15:40:23",
+    "total_devices": 59,
+    "avg_latency": 21.83,
+    "changes": 14
+  },
+  {
+    "timestamp": "15:41:09",
+    "date": "2026-03-23 15:41:09",
+    "total_devices": 59,
+    "avg_latency": 46.92,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:41:53",
+    "date": "2026-03-23 15:41:53",
+    "total_devices": 59,
+    "avg_latency": 28.66,
+    "changes": 15
+  },
+  {
+    "timestamp": "15:42:37",
+    "date": "2026-03-23 15:42:37",
+    "total_devices": 60,
+    "avg_latency": 31.34,
+    "changes": 15
+  },
+  {
+    "timestamp": "15:43:24",
+    "date": "2026-03-23 15:43:24",
+    "total_devices": 61,
+    "avg_latency": 18.11,
+    "changes": 21
+  },
+  {
+    "timestamp": "15:44:11",
+    "date": "2026-03-23 15:44:11",
+    "total_devices": 64,
+    "avg_latency": 44.98,
+    "changes": 22
+  },
+  {
+    "timestamp": "15:44:58",
+    "date": "2026-03-23 15:44:58",
+    "total_devices": 64,
+    "avg_latency": 19.84,
+    "changes": 19
+  },
+  {
+    "timestamp": "15:45:44",
+    "date": "2026-03-23 15:45:44",
+    "total_devices": 62,
+    "avg_latency": 33.28,
+    "changes": 13
+  },
+  {
+    "timestamp": "15:46:29",
+    "date": "2026-03-23 15:46:29",
+    "total_devices": 65,
+    "avg_latency": 35.4,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:47:18",
+    "date": "2026-03-23 15:47:18",
+    "total_devices": 72,
+    "avg_latency": 21.61,
+    "changes": 9
+  },
+  {
+    "timestamp": "15:48:07",
+    "date": "2026-03-23 15:48:07",
+    "total_devices": 73,
+    "avg_latency": 27.45,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:48:58",
+    "date": "2026-03-23 15:48:58",
+    "total_devices": 76,
+    "avg_latency": 44.85,
+    "changes": 15
+  },
+  {
+    "timestamp": "15:49:48",
+    "date": "2026-03-23 15:49:48",
+    "total_devices": 74,
+    "avg_latency": 59.68,
+    "changes": 20
+  },
+  {
+    "timestamp": "15:50:37",
+    "date": "2026-03-23 15:50:37",
+    "total_devices": 74,
+    "avg_latency": 42.2,
+    "changes": 17
+  },
+  {
+    "timestamp": "15:51:26",
+    "date": "2026-03-23 15:51:26",
+    "total_devices": 76,
+    "avg_latency": 51.09,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:52:12",
+    "date": "2026-03-23 15:52:12",
+    "total_devices": 62,
+    "avg_latency": 24.35,
+    "changes": 25
+  },
+  {
+    "timestamp": "15:52:59",
+    "date": "2026-03-23 15:52:59",
+    "total_devices": 65,
+    "avg_latency": 38.34,
+    "changes": 30
+  },
+  {
+    "timestamp": "15:53:33",
+    "date": "2026-03-23 15:53:33",
+    "total_devices": 24,
+    "avg_latency": 9.79,
+    "changes": 44
+  },
+  {
+    "timestamp": "15:54:23",
+    "date": "2026-03-23 15:54:23",
+    "total_devices": 74,
+    "avg_latency": 30.81,
+    "changes": 50
+  },
+  {
+    "timestamp": "15:55:14",
+    "date": "2026-03-23 15:55:14",
+    "total_devices": 77,
+    "avg_latency": 38.94,
+    "changes": 13
+  },
+  {
+    "timestamp": "15:56:03",
+    "date": "2026-03-23 15:56:03",
+    "total_devices": 75,
+    "avg_latency": 39.69,
+    "changes": 11
+  },
+  {
+    "timestamp": "15:56:54",
+    "date": "2026-03-23 15:56:54",
+    "total_devices": 77,
+    "avg_latency": 88.78,
+    "changes": 29
+  },
+  {
+    "timestamp": "15:57:43",
+    "date": "2026-03-23 15:57:43",
+    "total_devices": 78,
+    "avg_latency": 28.99,
+    "changes": 12
+  },
+  {
+    "timestamp": "15:58:32",
+    "date": "2026-03-23 15:58:32",
+    "total_devices": 75,
+    "avg_latency": 29.62,
+    "changes": 10
+  },
+  {
+    "timestamp": "15:59:21",
+    "date": "2026-03-23 15:59:21",
+    "total_devices": 77,
+    "avg_latency": 35.21,
+    "changes": 14
+  },
+  {
+    "timestamp": "16:00:09",
+    "date": "2026-03-23 16:00:09",
+    "total_devices": 75,
+    "avg_latency": 32.21,
+    "changes": 14
+  },
+  {
+    "timestamp": "16:00:53",
+    "date": "2026-03-23 16:00:53",
+    "total_devices": 66,
+    "avg_latency": 24.25,
+    "changes": 16
+  },
+  {
+    "timestamp": "16:01:41",
+    "date": "2026-03-23 16:01:41",
+    "total_devices": 73,
+    "avg_latency": 33.65,
+    "changes": 23
+  },
+  {
+    "timestamp": "16:02:26",
+    "date": "2026-03-23 16:02:26",
+    "total_devices": 67,
+    "avg_latency": 27.12,
+    "changes": 26
+  },
+  {
+    "timestamp": "16:03:15",
+    "date": "2026-03-23 16:03:15",
+    "total_devices": 75,
+    "avg_latency": 37.22,
+    "changes": 28
+  },
+  {
+    "timestamp": "16:04:06",
+    "date": "2026-03-23 16:04:06",
+    "total_devices": 80,
+    "avg_latency": 34.78,
+    "changes": 15
+  },
+  {
+    "timestamp": "16:04:58",
+    "date": "2026-03-23 16:04:58",
+    "total_devices": 84,
+    "avg_latency": 25.66,
+    "changes": 13
+  },
+  {
+    "timestamp": "16:05:51",
+    "date": "2026-03-23 16:05:51",
+    "total_devices": 87,
+    "avg_latency": 30.49,
+    "changes": 17
+  },
+  {
+    "timestamp": "16:06:43",
+    "date": "2026-03-23 16:06:43",
+    "total_devices": 85,
+    "avg_latency": 22.96,
+    "changes": 15
+  },
+  {
+    "timestamp": "16:07:34",
+    "date": "2026-03-23 16:07:34",
+    "total_devices": 86,
+    "avg_latency": 34.09,
+    "changes": 18
+  },
+  {
+    "timestamp": "16:08:21",
+    "date": "2026-03-23 16:08:21",
+    "total_devices": 66,
+    "avg_latency": 46.6,
+    "changes": 28
+  },
+  {
+    "timestamp": "16:09:13",
+    "date": "2026-03-23 16:09:13",
+    "total_devices": 83,
+    "avg_latency": 39.55,
+    "changes": 25
+  },
+  {
+    "timestamp": "16:10:05",
+    "date": "2026-03-23 16:10:05",
+    "total_devices": 87,
+    "avg_latency": 55.3,
+    "changes": 18
+  },
+  {
+    "timestamp": "16:10:57",
+    "date": "2026-03-23 16:10:57",
+    "total_devices": 80,
+    "avg_latency": 32.83,
+    "changes": 16
+  },
+  {
+    "timestamp": "16:11:44",
+    "date": "2026-03-23 16:11:44",
+    "total_devices": 70,
+    "avg_latency": 22.53,
+    "changes": 24
+  },
+  {
+    "timestamp": "16:12:33",
+    "date": "2026-03-23 16:12:33",
+    "total_devices": 82,
+    "avg_latency": 29.78,
+    "changes": 20
+  },
+  {
+    "timestamp": "16:13:24",
+    "date": "2026-03-23 16:13:24",
+    "total_devices": 82,
+    "avg_latency": 20.78,
+    "changes": 18
+  },
+  {
+    "timestamp": "16:14:22",
+    "date": "2026-03-23 16:14:22",
+    "total_devices": 86,
+    "avg_latency": 23.86,
+    "changes": 13
+  },
+  {
+    "timestamp": "16:15:12",
+    "date": "2026-03-23 16:15:12",
+    "total_devices": 81,
+    "avg_latency": 75.78,
+    "changes": 24
+  },
+  {
+    "timestamp": "16:16:04",
+    "date": "2026-03-23 16:16:04",
+    "total_devices": 80,
+    "avg_latency": 67.04,
+    "changes": 20
+  },
+  {
+    "timestamp": "16:16:55",
+    "date": "2026-03-23 16:16:55",
+    "total_devices": 76,
+    "avg_latency": 43.76,
+    "changes": 21
+  },
+  {
+    "timestamp": "16:17:44",
+    "date": "2026-03-23 16:17:44",
+    "total_devices": 73,
+    "avg_latency": 26.99,
+    "changes": 29
+  },
+  {
+    "timestamp": "16:18:32",
+    "date": "2026-03-23 16:18:32",
+    "total_devices": 74,
+    "avg_latency": 36.16,
+    "changes": 21
+  },
+  {
+    "timestamp": "16:19:23",
+    "date": "2026-03-23 16:19:23",
+    "total_devices": 83,
+    "avg_latency": 33.53,
+    "changes": 18
+  },
+  {
+    "timestamp": "16:20:12",
+    "date": "2026-03-23 16:20:12",
+    "total_devices": 80,
+    "avg_latency": 24.79,
+    "changes": 13
+  },
+  {
+    "timestamp": "16:21:01",
+    "date": "2026-03-23 16:21:01",
+    "total_devices": 79,
+    "avg_latency": 66.44,
+    "changes": 17
+  },
+  {
+    "timestamp": "16:21:46",
+    "date": "2026-03-23 16:21:46",
+    "total_devices": 70,
+    "avg_latency": 40.26,
+    "changes": 17
+  },
+  {
+    "timestamp": "16:22:34",
+    "date": "2026-03-23 16:22:34",
+    "total_devices": 73,
+    "avg_latency": 37.23,
+    "changes": 19
+  },
+  {
+    "timestamp": "16:23:25",
+    "date": "2026-03-23 16:23:25",
+    "total_devices": 80,
+    "avg_latency": 18.77,
+    "changes": 18
+  }
+]

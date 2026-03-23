@@ -1,0 +1,802 @@
+{
+  "172.21.16.115": {
+    "ip": "172.21.16.115",
+    "mac": "f8:54:f6:a2:20:43",
+    "hostname": "HP-Laptop-15s",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 0.5,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.9": {
+    "ip": "172.21.16.9",
+    "mac": "58:61:63:ff:21:4b",
+    "hostname": "Switch-1",
+    "user": "Switch",
+    "type": "switch",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Network OS"
+  },
+  "172.21.16.92": {
+    "ip": "172.21.16.92",
+    "mac": "fe:4c:71:87:a2:ca",
+    "hostname": "MACBOOKAIR-8D3F",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 12.0,
+    "status": "online",
+    "os": "macOS"
+  },
+  "172.21.16.111": {
+    "ip": "172.21.16.111",
+    "mac": "20:2b:20:82:83:77",
+    "hostname": "ni8-hawk",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 24.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.112": {
+    "ip": "172.21.16.112",
+    "mac": "f8:54:f6:64:6d:ed",
+    "hostname": "LAPTOP-AE25D6F8",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 21.0,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.89": {
+    "ip": "172.21.16.89",
+    "mac": "e0:8f:4c:8a:73:a2",
+    "hostname": "Brindhasri",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.64": {
+    "ip": "172.21.16.64",
+    "mac": "8a:be:95:1e:5a:60",
+    "hostname": "MACBOOKAIR-9473",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "macOS"
+  },
+  "172.21.16.68": {
+    "ip": "172.21.16.68",
+    "mac": "f8:54:f6:4f:07:a7",
+    "hostname": "R11",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.133": {
+    "ip": "172.21.16.133",
+    "mac": "28:2e:89:a8:a5:a4",
+    "hostname": "LAPTOP-PBP7H6F9",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.57": {
+    "ip": "172.21.16.57",
+    "mac": "e4:5e:37:bf:7c:23",
+    "hostname": "DESKTOP-JGQ82DI",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.56": {
+    "ip": "172.21.16.56",
+    "mac": "1c:ce:51:f1:fa:9f",
+    "hostname": "LAPTOP-T9AUOQD4",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.138": {
+    "ip": "172.21.16.138",
+    "mac": "30:f6:ef:c5:b9:6c",
+    "hostname": "VIDHULKUMAAR",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 73.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.130": {
+    "ip": "172.21.16.130",
+    "mac": "6e:84:a5:a1:54:55",
+    "hostname": "MACBOOKAIR-AA92",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 44.0,
+    "status": "online",
+    "os": "macOS"
+  },
+  "172.21.16.51": {
+    "ip": "172.21.16.51",
+    "mac": "c2:81:08:c8:c8:4d",
+    "hostname": "SARAVANAN",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 74.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.86": {
+    "ip": "172.21.16.86",
+    "mac": "ee:9b:2e:5f:e0:f1",
+    "hostname": "LAPTOP-ODSID5ES",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 48.0,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.186": {
+    "ip": "172.21.16.186",
+    "mac": "00:45:e2:18:b1:61",
+    "hostname": "DESKTOP-CVD36SL",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 27.0,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.124": {
+    "ip": "172.21.16.124",
+    "mac": "7c:b5:66:3c:14:64",
+    "hostname": "LAPTOP-PGQIBA2D",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 57.0,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.97": {
+    "ip": "172.21.16.97",
+    "mac": "e8:c8:29:99:6d:21",
+    "hostname": "SUBEESESH",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.99": {
+    "ip": "172.21.16.99",
+    "mac": "d4:d8:53:c4:62:10",
+    "hostname": "DESKTOP-F857K7Q",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 20.0,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.96": {
+    "ip": "172.21.16.96",
+    "mac": "40:c7:3c:27:57:c2",
+    "hostname": "MSI",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 128.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.173": {
+    "ip": "172.21.16.173",
+    "mac": "a8:41:f4:95:1a:3d",
+    "hostname": "MadheshL",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": 21.0,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.136": {
+    "ip": "172.21.16.136",
+    "mac": "14:ac:60:69:31:fb",
+    "hostname": "DESKTOP-62LV4OJ",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.106": {
+    "ip": "172.21.16.106",
+    "mac": "dc:4b:a1:5f:bd:44",
+    "hostname": "DESKTOP-2O9T4GF",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.20": {
+    "ip": "172.21.16.20",
+    "mac": "58:61:63:ff:22:0b",
+    "hostname": "172.21.16.20",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.32": {
+    "ip": "172.21.16.32",
+    "mac": "58:61:63:ff:1f:ab",
+    "hostname": "172.21.16.32",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.13": {
+    "ip": "172.21.16.13",
+    "mac": "58:61:63:ff:16:0b",
+    "hostname": "172.21.16.13",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.27": {
+    "ip": "172.21.16.27",
+    "mac": "58:61:63:ff:21:8b",
+    "hostname": "172.21.16.27",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.15": {
+    "ip": "172.21.16.15",
+    "mac": "58:61:63:f7:5e:7f",
+    "hostname": "172.21.16.15",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.14": {
+    "ip": "172.21.16.14",
+    "mac": "58:61:63:00:fc:01",
+    "hostname": "172.21.16.14",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.18": {
+    "ip": "172.21.16.18",
+    "mac": "58:61:63:ff:11:2b",
+    "hostname": "172.21.16.18",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.26": {
+    "ip": "172.21.16.26",
+    "mac": "58:61:63:ff:22:6b",
+    "hostname": "172.21.16.26",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.12": {
+    "ip": "172.21.16.12",
+    "mac": "58:61:63:ff:26:eb",
+    "hostname": "172.21.16.12",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.10": {
+    "ip": "172.21.16.10",
+    "mac": "58:61:63:ff:25:4b",
+    "hostname": "172.21.16.10",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.17": {
+    "ip": "172.21.16.17",
+    "mac": "58:61:63:f7:5e:9f",
+    "hostname": "172.21.16.17",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.23": {
+    "ip": "172.21.16.23",
+    "mac": "58:61:63:ff:22:cb",
+    "hostname": "172.21.16.23",
+    "user": "Server",
+    "type": "server",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.22": {
+    "ip": "172.21.16.22",
+    "mac": "58:61:63:ff:0f:6b",
+    "hostname": "172.21.16.22",
+    "user": "Server",
+    "type": "server",
+    "latency": 4.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.21": {
+    "ip": "172.21.16.21",
+    "mac": "58:61:63:ff:17:cb",
+    "hostname": "172.21.16.21",
+    "user": "Server",
+    "type": "server",
+    "latency": 3.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.28": {
+    "ip": "172.21.16.28",
+    "mac": "f0:a8:82:14:ac:70",
+    "hostname": "172.21.16.28",
+    "user": "Server",
+    "type": "server",
+    "latency": 13.0,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.105": {
+    "ip": "172.21.16.105",
+    "mac": "10:68:38:09:ec:e3",
+    "hostname": "KevinCz",
+    "user": "Computer",
+    "type": "computer",
+    "latency": 7.0,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.101": {
+    "ip": "172.21.16.101",
+    "mac": "4c:eb:bd:cb:dd:05",
+    "hostname": "172.21.16.101",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.49": {
+    "ip": "172.21.16.49",
+    "mac": "38:8d:3d:7b:6e:f6",
+    "hostname": "172.21.16.49",
+    "user": "Server",
+    "type": "server",
+    "latency": null,
+    "status": "online",
+    "os": "Server Linux/Windows"
+  },
+  "172.21.16.110": {
+    "ip": "172.21.16.110",
+    "mac": "60:ff:9e:51:20:c8",
+    "hostname": "172.21.16.110",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.108": {
+    "ip": "172.21.16.108",
+    "mac": "20:0b:74:32:4c:e8",
+    "hostname": "172.21.16.108",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.104": {
+    "ip": "172.21.16.104",
+    "mac": "40:1a:58:c7:2e:4b",
+    "hostname": "172.21.16.104",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.82": {
+    "ip": "172.21.16.82",
+    "mac": "7c:2a:31:78:1f:22",
+    "hostname": "172.21.16.82",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.62": {
+    "ip": "172.21.16.62",
+    "mac": "98:bd:80:69:39:58",
+    "hostname": "MSI",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.52": {
+    "ip": "172.21.16.52",
+    "mac": "f8:54:f6:23:aa:a4",
+    "hostname": "172.21.16.52",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.90": {
+    "ip": "172.21.16.90",
+    "mac": "a8:e2:91:93:8b:da",
+    "hostname": "172.21.16.90",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.174": {
+    "ip": "172.21.16.174",
+    "mac": "d8:80:83:74:92:bf",
+    "hostname": "DESKTOP-31TD0GF",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.109": {
+    "ip": "172.21.16.109",
+    "mac": "cc:5e:f8:bd:80:0f",
+    "hostname": "172.21.16.109",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.95": {
+    "ip": "172.21.16.95",
+    "mac": "70:66:55:fc:d4:99",
+    "hostname": "172.21.16.95",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.107": {
+    "ip": "172.21.16.107",
+    "mac": "dc:4b:a1:53:fe:9d",
+    "hostname": "172.21.16.107",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.143": {
+    "ip": "172.21.16.143",
+    "mac": "8c:8b:5b:20:03:8e",
+    "hostname": "DESKTOP-UVIULNA",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows"
+  },
+  "172.21.16.75": {
+    "ip": "172.21.16.75",
+    "mac": "bc:03:58:de:67:64",
+    "hostname": "172.21.16.75",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.55": {
+    "ip": "172.21.16.55",
+    "mac": "b0:6b:11:b5:e4:ae",
+    "hostname": "172.21.16.55",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.145": {
+    "ip": "172.21.16.145",
+    "mac": "80:d2:1d:c4:2e:51",
+    "hostname": "172.21.16.145",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.103": {
+    "ip": "172.21.16.103",
+    "mac": "58:02:05:c9:09:48",
+    "hostname": "172.21.16.103",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.135": {
+    "ip": "172.21.16.135",
+    "mac": "cc:47:40:cd:a0:b9",
+    "hostname": "172.21.16.135",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.117": {
+    "ip": "172.21.16.117",
+    "mac": "10:5f:ad:62:6a:fb",
+    "hostname": "172.21.16.117",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.129": {
+    "ip": "172.21.16.129",
+    "mac": "cc:47:40:8d:30:b9",
+    "hostname": "172.21.16.129",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.88": {
+    "ip": "172.21.16.88",
+    "mac": "cc:47:40:67:9c:7f",
+    "hostname": "172.21.16.88",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.118": {
+    "ip": "172.21.16.118",
+    "mac": "24:b2:b9:c6:11:7b",
+    "hostname": "172.21.16.118",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.122": {
+    "ip": "172.21.16.122",
+    "mac": "e0:2e:0b:d1:36:48",
+    "hostname": "172.21.16.122",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.172": {
+    "ip": "172.21.16.172",
+    "mac": "50:bb:b5:16:32:f8",
+    "hostname": "172.21.16.172",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.162": {
+    "ip": "172.21.16.162",
+    "mac": "04:ec:d8:4d:80:55",
+    "hostname": "172.21.16.162",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.63": {
+    "ip": "172.21.16.63",
+    "mac": "ae:4b:6f:19:49:2a",
+    "hostname": "172.21.16.63",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.180": {
+    "ip": "172.21.16.180",
+    "mac": "7a:73:d3:c4:b3:8c",
+    "hostname": "172.21.16.180",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": 5.0,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.159": {
+    "ip": "172.21.16.159",
+    "mac": "c0:bf:be:53:59:68",
+    "hostname": "172.21.16.159",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.76": {
+    "ip": "172.21.16.76",
+    "mac": "02:2b:7d:5d:c5:1b",
+    "hostname": "172.21.16.76",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.126": {
+    "ip": "172.21.16.126",
+    "mac": "1c:ce:51:eb:a5:ac",
+    "hostname": "172.21.16.126",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.87": {
+    "ip": "172.21.16.87",
+    "mac": "60:e9:aa:d1:c9:d5",
+    "hostname": "172.21.16.87",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.158": {
+    "ip": "172.21.16.158",
+    "mac": "d8:c0:a6:9b:60:a9",
+    "hostname": "172.21.16.158",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.119": {
+    "ip": "172.21.16.119",
+    "mac": "10:68:38:8e:87:7b",
+    "hostname": "172.21.16.119",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.74": {
+    "ip": "172.21.16.74",
+    "mac": "14:d4:24:1b:7a:3f",
+    "hostname": "172.21.16.74",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.85": {
+    "ip": "172.21.16.85",
+    "mac": "cc:47:40:36:cd:a2",
+    "hostname": "172.21.16.85",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.59": {
+    "ip": "172.21.16.59",
+    "mac": "e8:fb:1c:47:02:39",
+    "hostname": "172.21.16.59",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.102": {
+    "ip": "172.21.16.102",
+    "mac": "cc:47:40:38:52:11",
+    "hostname": "172.21.16.102",
+    "user": "Computer",
+    "type": "computer",
+    "latency": null,
+    "status": "online",
+    "os": "Windows/macOS/Linux"
+  },
+  "172.21.16.164": {
+    "ip": "172.21.16.164",
+    "mac": "24:b2:b9:3e:d4:b1",
+    "hostname": "172.21.16.164",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.161": {
+    "ip": "172.21.16.161",
+    "mac": "10:6f:d9:0d:19:4f",
+    "hostname": "172.21.16.161",
+    "user": "Unknown Device",
+    "type": "device",
+    "latency": null,
+    "status": "online",
+    "os": "IoT OS"
+  },
+  "172.21.16.1": {
+    "ip": "172.21.16.1",
+    "mac": "58:61:63:fa:8c:6b",
+    "hostname": "Router",
+    "user": "Router",
+    "type": "router",
+    "latency": 2.0,
+    "status": "online",
+    "os": "Router OS"
+  }
+}
