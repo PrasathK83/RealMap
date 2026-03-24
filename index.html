@@ -1447,15 +1447,7 @@ let latencyHistory = [];
 let dashboardMode = 'topology';
 let currentScanInterval = 15;
 let networkInsights = { summary: {}, conflicts: {}, per_device: {} };
-
-console.log('[RealMap] State initialized');
-
-// ── SOCKET.IO ──
-console.log('[RealMap] Initializing Socket.IO...');
-const socket = io(window.location.origin, { transports: ['polling'] });
-console.log('[RealMap] Socket.IO instance created');
-
-socket.on('connect', () => {
+  let IS_CLOUD_ENV = false;
   console.log('[RealMap] Socket connected to server');
   try {
     addAlert('Connected to RealMap server', 'info');
@@ -1574,6 +1566,18 @@ function getDisplayHostname(device) {
   return hostname;
 }
 
+async function checkCloudMode() {
+  try {
+    const response = await fetch('/api/capabilities');
+    const data = await response.json();
+    IS_CLOUD_ENV = data.cloud_mode || false;
+    console.log('[RealMap] Cloud mode detected:', IS_CLOUD_ENV);
+  } catch (err) {
+    console.warn('[RealMap] Could not determine cloud mode:', err);
+    IS_CLOUD_ENV = false;
+  }
+}
+
 async function refreshNetworkInsights() {
   try {
     const response = await fetch('/api/network-insights');
@@ -1658,8 +1662,11 @@ function renderAnalytics(payload) {
 function renderHealthTrend(history) {
   const svg = document.getElementById('analytics-health-line');
   if (!svg) return;
-  if (!history.length) {
-    svg.innerHTML = '<text x="12" y="28" fill="#4a7a8a" font-size="12">No trend data yet. Run a few scans to populate this chart.</text>';
+  if (!history || !Array.isArray(history) || !history.length) {
+    const msg = IS_CLOUD_ENV ? 
+      'No trend data (cloud mode: enable edge scanner via /api/ingest).' :
+      'No trend data yet. Run a few scans to populate this chart.';
+    svg.innerHTML = `<text x="12" y="28" fill="#4a7a8a" font-size="11">${msg}</text>`;
     return;
   }
 
@@ -2555,6 +2562,9 @@ if (document.readyState === 'loading') {
 
 function initApp() {
   console.log('[RealMap] DOM ready, attaching event listeners...');
+  
+  // Check cloud mode early
+  checkCloudMode();
   
   // Attach event listeners
   const scanBtn = document.getElementById('scan-btn');
