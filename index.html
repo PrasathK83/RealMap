@@ -1194,7 +1194,7 @@
       <span class="health-value" id="health-value">100%</span>
     </div>
     <button class="scan-btn" id="scan-btn">⟳ SCAN</button>
-    <button class="scan-btn" id="ports-btn" style="border-color:var(--accent2);color:var(--accent2)">🔌 PORTS</button>
+    <button class="scan-btn" id="ports-btn" style="border-color:var(--accent2);color:var(--accent2)">🌐 DNS</button>
   </div>
 </header>
 
@@ -1308,6 +1308,11 @@
         <h3>Highest Latency Devices</h3>
         <div class="simple-list" id="analytics-top-latency"></div>
       </div>
+
+      <div class="panel-card span-12">
+        <h3>Network Insights</h3>
+        <div class="simple-list" id="analytics-network-insights"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -1402,45 +1407,11 @@
 <div class="ports-modal" id="ports-modal">
   <div class="ports-modal-content">
     <div class="ports-modal-header">
-      <h2>🔌 Network Reconnaissance</h2>
+      <h2>🌐 DNS Lookup</h2>
       <button class="ports-modal-close" id="ports-modal-close">&times;</button>
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="recon-tabs">
-      <button class="recon-tab-btn active" data-tab="ports-tab">Port Scan</button>
-      <button class="recon-tab-btn" data-tab="services-tab">Services</button>
-      <button class="recon-tab-btn" data-tab="dns-tab">DNS Lookup</button>
-    </div>
-
-    <div class="ports-selection">
-      <label>Select an IP to Scan</label>
-      <div class="ports-ip-list" id="ports-ip-list">
-        <div class="ports-empty">Loading network devices...</div>
-      </div>
-    </div>
-
-    <div class="ports-actions">
-      <button class="ports-scan-btn" id="ports-scan-btn" disabled>⚡ SCAN</button>
-      <button class="ports-scan-btn" id="ports-recon-btn" disabled style="background:linear-gradient(135deg,#ff6b00,#ffaa00)">🔍 DEEP RECON</button>
-    </div>
-
-    <!-- Ports Tab -->
-    <div class="recon-tab-content active" id="ports-tab">
-      <div class="ports-results" id="ports-results">
-        <div class="ports-empty">Select an IP and click SCAN to begin scanning</div>
-      </div>
-    </div>
-
-    <!-- Services Tab -->
-    <div class="recon-tab-content" id="services-tab">
-      <div class="ports-results" id="services-results">
-        <div class="ports-empty">Run DEEP RECON to get service information</div>
-      </div>
-    </div>
-
-    <!-- DNS Tab -->
-    <div class="recon-tab-content" id="dns-tab">
+    <div class="recon-tab-content active" id="dns-tab">
       <div class="ports-results" id="dns-results">
         <div class="ports-empty">Enter an IP or hostname to perform DNS lookup</div>
       </div>
@@ -1475,6 +1446,7 @@ let allDevices   = [];
 let latencyHistory = [];
 let dashboardMode = 'topology';
 let currentScanInterval = 15;
+let networkInsights = { summary: {}, conflicts: {}, per_device: {} };
 
 console.log('[RealMap] State initialized');
 
@@ -1509,6 +1481,7 @@ socket.on('topology_update', (data) => {
   updateStats(data.stats || {});
   updateLatencyGraph(data);
   updateDeviceList(allDevices);
+  refreshNetworkInsights();
   renderTopology(data);
   updateAlerts(data.changes || []);
   updateHealthScore(data.health || 100);
@@ -1601,6 +1574,28 @@ function getDisplayHostname(device) {
   return hostname;
 }
 
+async function refreshNetworkInsights() {
+  try {
+    const response = await fetch('/api/network-insights');
+    const data = await response.json();
+    if (!response.ok || data.status !== 'success') {
+      return;
+    }
+    networkInsights = data;
+
+    // If a device is currently selected, refresh details in-place.
+    if (selectedNode) {
+      selectDevice(selectedNode);
+    }
+
+    if (dashboardMode === 'analytics') {
+      renderNetworkInsightsPanel();
+    }
+  } catch (error) {
+    console.error('[RealMap] Failed to load network insights:', error);
+  }
+}
+
 function setDashboardMode(mode) {
   dashboardMode = mode;
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1657,6 +1652,7 @@ function renderAnalytics(payload) {
   renderHealthTrend(history);
   renderStatusBreakdown();
   renderTopLatency();
+  renderNetworkInsightsPanel();
 }
 
 function renderHealthTrend(history) {
@@ -1735,6 +1731,84 @@ function renderTopLatency() {
       </div>
     `;
   }).join('');
+}
+
+function renderNetworkInsightsPanel() {
+  const mount = document.getElementById('analytics-network-insights');
+  if (!mount) return;
+
+  const summary = networkInsights?.summary || {};
+  const conflicts = networkInsights?.conflicts || {};
+  const duplicateIps = conflicts.duplicate_ips || [];
+  const duplicateMacs = conflicts.duplicate_macs || [];
+  const subnets = networkInsights?.subnets || [];
+
+  const rows = [];
+  rows.push(`
+    <div class="simple-row">
+      <span>Devices / Subnets</span>
+      <span class="mono">${summary.total_devices || 0} / ${subnets.length}</span>
+      <span class="pill info">inventory</span>
+    </div>
+  `);
+  rows.push(`
+    <div class="simple-row">
+      <span>Duplicate IP Conflicts</span>
+      <span class="mono">${summary.duplicate_ip_conflicts || 0}</span>
+      <span class="pill ${(summary.duplicate_ip_conflicts || 0) ? 'error' : 'info'}">${(summary.duplicate_ip_conflicts || 0) ? 'action' : 'clear'}</span>
+    </div>
+  `);
+  rows.push(`
+    <div class="simple-row">
+      <span>Duplicate MAC Conflicts</span>
+      <span class="mono">${summary.duplicate_mac_conflicts || 0}</span>
+      <span class="pill ${(summary.duplicate_mac_conflicts || 0) ? 'error' : 'info'}">${(summary.duplicate_mac_conflicts || 0) ? 'action' : 'clear'}</span>
+    </div>
+  `);
+  rows.push(`
+    <div class="simple-row">
+      <span>Private / Public IPs</span>
+      <span class="mono">${summary.private_ip_devices || 0} / ${summary.public_ip_devices || 0}</span>
+      <span class="pill info">scope</span>
+    </div>
+  `);
+
+  if (subnets.length) {
+    const topSubnets = subnets.slice(0, 3)
+      .map(item => `${item.subnet} (${item.devices})`)
+      .join(' | ');
+    rows.push(`
+      <div class="simple-row">
+        <span>Top Subnets</span>
+        <span class="mono">${topSubnets}</span>
+        <span class="pill info">distribution</span>
+      </div>
+    `);
+  }
+
+  if (duplicateIps.length) {
+    const first = duplicateIps[0];
+    rows.push(`
+      <div class="simple-row">
+        <span>IP Conflict Example</span>
+        <span class="mono">${first.ip}: ${first.macs.join(', ')}</span>
+        <span class="pill error">critical</span>
+      </div>
+    `);
+  }
+
+  if (duplicateMacs.length) {
+    const first = duplicateMacs[0];
+    rows.push(`
+      <div class="simple-row">
+        <span>MAC Conflict Example</span>
+        <span class="mono">${first.mac}: ${first.ips.join(', ')}</span>
+        <span class="pill error">critical</span>
+      </div>
+    `);
+  }
+
+  mount.innerHTML = rows.join('');
 }
 
 async function loadAlertsCenter() {
@@ -2362,6 +2436,8 @@ function selectDevice(ip) {
     l.source === ip || l.target === ip ||
     l.source?.ip === ip || l.target?.ip === ip
   );
+  const insight = networkInsights?.per_device?.[ip] || null;
+  const insightWarnings = (insight?.warnings || []).map(msg => `• ${msg}`).join('<br>');
 
   document.getElementById('detail-panel').innerHTML = `
     <div class="section-title">Device Details</div>
@@ -2401,6 +2477,31 @@ function selectDevice(ip) {
       <span class="detail-label">Links</span>
       <span class="detail-value">${links.length} connection(s)</span>
     </div>
+    <div class="detail-row">
+      <span class="detail-label">Vendor Hint</span>
+      <span class="detail-value">${insight?.vendor_hint || 'Unknown'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">IP Scope</span>
+      <span class="detail-value">${insight?.ip_scope || 'unknown'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Subnet</span>
+      <span class="detail-value">${insight?.subnet || '—'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">MAC Type</span>
+      <span class="detail-value">${(insight?.mac_type || 'unknown').replace('_', ' ')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Gateway Hint</span>
+      <span class="detail-value">${insight?.gateway_candidate ? 'Possible gateway address' : 'No'}</span>
+    </div>
+    ${insightWarnings ? `
+    <div style="margin-top:8px;padding:8px;border:1px solid rgba(255,170,0,0.25);background:rgba(255,170,0,0.08);border-radius:4px;">
+      <div class="detail-label" style="margin-bottom:4px;color:var(--warn)">Network Notes</div>
+      <div style="font-size:11px;color:var(--textdim);line-height:1.4;">${insightWarnings}</div>
+    </div>` : ''}
     <div style="margin-top:10px">
       <div class="detail-label" style="margin-bottom:6px">Latency Indicator</div>
       <div class="latency-bar">
@@ -2526,6 +2627,7 @@ function fetchInitialTopology() {
       updateStats(data.stats || {});
       updateLatencyGraph(data);
       updateDeviceList(allDevices);
+      refreshNetworkInsights();
       renderTopology(data);
       document.getElementById('last-scan').textContent = data.timestamp || '—';
       if (data.demo) {
@@ -2554,35 +2656,28 @@ window.addEventListener('resize', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ── PORT SCANNER FUNCTIONALITY ────────────────────────────────────────────────
+// ── DNS LOOKUP TOOL ───────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-let selectedPortIP = null;
 const portsModal = document.getElementById('ports-modal');
 const portsBtn = document.getElementById('ports-btn');
 const portsModalClose = document.getElementById('ports-modal-close');
-const portsIPList = document.getElementById('ports-ip-list');
-const portsScanBtn = document.getElementById('ports-scan-btn');
-const portsResults = document.getElementById('ports-results');
-const portsReconBtn = document.getElementById('ports-recon-btn');
-const servicesResults = document.getElementById('services-results');
 const dnsResults = document.getElementById('dns-results');
 const dnsInput = document.getElementById('dns-input');
 const dnsLookupBtn = document.getElementById('dns-lookup-btn');
 
-// Tab functionality
-document.querySelectorAll('.recon-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabName = btn.dataset.tab;
-    
-    // Update button styles
-    document.querySelectorAll('.recon-tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    
-    // Update content visibility
-    document.querySelectorAll('.recon-tab-content').forEach(content => content.classList.remove('active'));
-    document.getElementById(tabName).classList.add('active');
-  });
+portsBtn.addEventListener('click', () => {
+  portsModal.classList.add('active');
+});
+
+portsModalClose.addEventListener('click', () => {
+  portsModal.classList.remove('active');
+});
+
+portsModal.addEventListener('click', (e) => {
+  if (e.target === portsModal) {
+    portsModal.classList.remove('active');
+  }
 });
 
 // DNS Lookup functionality
@@ -2595,8 +2690,9 @@ dnsLookupBtn.addEventListener('click', async () => {
   
   dnsResults.innerHTML = '<div class="ports-loading">🔍 Looking up DNS information...</div>';
   
-  const info = await getDNSInfo(target);
-  if (info) {
+  const dnsResponse = await getDNSInfo(target);
+  if (dnsResponse.ok && dnsResponse.data) {
+    const info = dnsResponse.data;
     let html = `<div style="padding:12px;">`;
     html += `<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:8px;">DNS Information for ${target}</div>`;
     
@@ -2616,440 +2712,32 @@ dnsLookupBtn.addEventListener('click', async () => {
     html += `</div>`;
     dnsResults.innerHTML = html;
   } else {
-    dnsResults.innerHTML = '<div class="ports-empty">❌ DNS lookup failed. Please check the target.</div>';
+    const errorMessage = (dnsResponse && dnsResponse.message) ? dnsResponse.message : 'DNS lookup failed. Please check the target.';
+    dnsResults.innerHTML = `<div class="ports-empty">❌ ${errorMessage}</div>`;
   }
 });
-
-// Open port scanner modal
-portsBtn.addEventListener('click', () => {
-  portsModal.classList.add('active');
-  loadPortsIPList();
-});
-
-// Close port scanner modal
-portsModalClose.addEventListener('click', () => {
-  portsModal.classList.remove('active');
-});
-
-// Close modal when clicking outside
-portsModal.addEventListener('click', (e) => {
-  if (e.target === portsModal) {
-    portsModal.classList.remove('active');
-  }
-});
-
-// Load list of available IPs
-async function loadPortsIPList() {
-  try {
-    selectedPortIP = null;
-    portsScanBtn.disabled = true;
-    portsReconBtn.disabled = true;
-    portsIPList.innerHTML = '<div class="ports-loading">⚡ Loading network devices...</div>';
-    
-    const response = await fetch('/api/ips');
-    const data = await response.json();
-    
-    if (data.status === 'success' && data.ips.length > 0) {
-      portsIPList.innerHTML = '';
-      data.ips.forEach(ip => {
-        const item = document.createElement('div');
-        item.className = 'ports-ip-item';
-        item.innerHTML = `
-          <input type="radio" name="port-ip" value="${ip.ip}" class="ports-ip-checkbox" id="ip-${ip.ip}">
-          <div class="ports-ip-info">
-            <div class="ports-ip-address">${ip.ip}</div>
-            <div class="ports-ip-hostname">${ip.hostname}</div>
-          </div>
-          <span class="ports-ip-status ${ip.status}">${ip.status}</span>
-        `;
-        
-        // Make entire item clickable
-        item.addEventListener('click', (e) => {
-          if (e.target.tagName !== 'INPUT') {
-            const input = item.querySelector('input');
-            input.checked = true;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        });
-        
-        // Handle radio button change
-        const input = item.querySelector('input');
-        input.addEventListener('change', (e) => {
-          if (e.target.checked) {
-            selectedPortIP = ip.ip;
-            document.querySelectorAll('.ports-ip-item').forEach(el => {
-              el.classList.remove('selected');
-              el.querySelector('input').checked = false;
-            });
-            item.classList.add('selected');
-            input.checked = true;
-            portsScanBtn.disabled = false;
-            portsReconBtn.disabled = false;
-            console.log('[RealMap] Selected IP for port scan:', selectedPortIP);
-          }
-        });
-        
-        portsIPList.appendChild(item);
-      });
-    } else {
-      portsIPList.innerHTML = '<div class="ports-empty">No devices found. Please run a network scan first.</div>';
-      portsScanBtn.disabled = true;
-      portsReconBtn.disabled = true;
-    }
-  } catch (error) {
-    console.error('[RealMap] Error loading IPs:', error);
-    portsIPList.innerHTML = '<div class="ports-empty">Error loading devices. Please try again.</div>';
-    portsScanBtn.disabled = true;
-    portsReconBtn.disabled = true;
-  }
-}
-
-// Scan ports on selected IP
-portsScanBtn.addEventListener('click', async () => {
-  if (!selectedPortIP) {
-    addAlert('Please select an IP address first', 'warning');
-    return;
-  }
-  
-  await scanPorts(selectedPortIP);
-});
-
-// Deep recon on selected IP
-portsReconBtn.addEventListener('click', async () => {
-  if (!selectedPortIP) {
-    addAlert('Please select an IP address first', 'warning');
-    return;
-  }
-  
-  await deepRecon(selectedPortIP);
-});
-
-async function deepRecon(ip) {
-  try {
-    portsReconBtn.disabled = true;
-    portsReconBtn.classList.add('scanning');
-    portsReconBtn.textContent = '🔍 SCANNING...';
-    
-    servicesResults.innerHTML = `<div class="ports-loading">🔎 Running deep reconnaissance on ${ip}...</div>`;
-    
-    const data = await getReconInfo(ip);
-    
-    if (data && data.status === 'success') {
-      displayServicesResults(data);
-    } else {
-      const errorMessage = (data && data.message) ? data.message : 'Failed to perform reconnaissance.';
-      servicesResults.innerHTML = `
-        <div style="padding:24px;text-align:center;">
-          <div style="font-size:24px;margin-bottom:8px;">⚠️</div>
-          <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Recon Error</div>
-          <div style="color:var(--textdim);font-size:11px;">
-            ${errorMessage}
-          </div>
-        </div>
-      `;
-    }
-    
-    // Switch to services tab
-    document.querySelectorAll('.recon-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('[data-tab="services-tab"]').classList.add('active');
-    document.querySelectorAll('.recon-tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('services-tab').classList.add('active');
-    
-  } catch (error) {
-    console.error('[RealMap] Recon error:', error);
-    servicesResults.innerHTML = `
-      <div style="padding:24px;text-align:center;">
-        <div style="font-size:24px;margin-bottom:8px;">❌</div>
-        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Connection Error</div>
-        <div style="color:var(--textdim);font-size:11px;">
-          Failed to perform reconnaissance.
-        </div>
-      </div>
-    `;
-  } finally {
-    portsReconBtn.disabled = false;
-    portsReconBtn.classList.remove('scanning');
-    portsReconBtn.textContent = '🔍 DEEP RECON';
-  }
-}
-
-function displayServicesResults(data) {
-  const { ip, open_ports, services } = data;
-  
-  let html = `
-    <div class="ports-results-header" style="padding:12px;">
-      <div>
-        <div>📍 Target IP</div>
-        <div class="ports-results-ip">${ip}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="color:var(--accent2);font-weight:600;font-size:14px;">
-          🔓 ${open_ports.length} port${open_ports.length !== 1 ? 's' : ''} open
-        </div>
-      </div>
-    </div>
-  `;
-  
-  if (open_ports.length > 0) {
-    html += `<div style="padding:0 12px;margin-top:12px;">`;
-    
-    open_ports.forEach(port => {
-      const serviceInfo = services[port];
-      html += `
-        <div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:4px;padding:12px;margin-bottom:12px;">
-          <div style="color:var(--accent);font-weight:600;font-size:13px;margin-bottom:8px;">🔓 PORT ${port}</div>
-      `;
-      
-      if (serviceInfo && serviceInfo.banner) {
-        html += `
-          <div style="background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;font-family:monospace;font-size:10px;color:var(--accent2);margin:8px 0;overflow:auto;max-height:80px;">
-            ${serviceInfo.banner}
-          </div>
-        `;
-      }
-      
-      if (serviceInfo && serviceInfo.ssl_info) {
-        html += formatSSLInfo(serviceInfo.ssl_info);
-      }
-      
-      html += `</div>`;
-    });
-    
-    html += `</div>`;
-  } else {
-    html += `
-      <div style="padding:24px;text-align:center;">
-        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
-        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">No Open Ports Found</div>
-      </div>
-    `;
-  }
-  
-  servicesResults.innerHTML = html;
-}
-
-async function scanPorts(ip) {
-  try {
-    portsScanBtn.disabled = true;
-    portsScanBtn.classList.add('scanning');
-    portsScanBtn.textContent = '⚡ SCANNING...';
-    
-    // Get device info
-    const ipListItems = document.querySelectorAll('.ports-ip-item');
-    let deviceName = 'Unknown';
-    ipListItems.forEach(item => {
-      if (item.querySelector('input').value === ip) {
-        deviceName = item.querySelector('.ports-ip-hostname').textContent;
-      }
-    });
-    
-    portsResults.innerHTML = `<div class="ports-loading">🔍 Scanning ports on ${ip} (${deviceName})...</div>`;
-    
-    const response = await fetch(`/api/ports/${ip}`);
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      displayPortResults(data);
-    } else {
-      portsResults.innerHTML = `
-        <div style="padding:24px;text-align:center;">
-          <div style="font-size:24px;margin-bottom:8px;">⚠️</div>
-          <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Scan Error</div>
-          <div style="color:var(--textdim);font-size:11px;">
-            ${data.message || 'Failed to scan the device. Check if the IP is reachable.'}
-          </div>
-        </div>
-      `;
-    }
-  } catch (error) {
-    console.error('[RealMap] Port scan error:', error);
-    portsResults.innerHTML = `
-      <div style="padding:24px;text-align:center;">
-        <div style="font-size:24px;margin-bottom:8px;">❌</div>
-        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Connection Error</div>
-        <div style="color:var(--textdim);font-size:11px;">
-          Failed to connect to scan service. Please check your network connection.
-        </div>
-      </div>
-    `;
-  } finally {
-    portsScanBtn.disabled = false;
-    portsScanBtn.classList.remove('scanning');
-    portsScanBtn.textContent = '⚡ SCAN';
-  }
-}
-
-// Display port scan results
-function displayPortResults(data) {
-  const { ip, open_ports, timestamp } = data;
-  
-  // Service details mapping
-  const serviceDetails = {
-    21: { name: 'FTP', description: 'File Transfer Protocol - File sharing' },
-    22: { name: 'SSH', description: 'Secure Shell - Remote access' },
-    23: { name: 'Telnet', description: 'Unencrypted remote access (Legacy)' },
-    25: { name: 'SMTP', description: 'Simple Mail Transfer Protocol - Email' },
-    53: { name: 'DNS', description: 'Domain Name System - Network resolution' },
-    80: { name: 'HTTP', description: 'Hypertext Transfer Protocol - Web' },
-    110: { name: 'POP3', description: 'Post Office Protocol - Email retrieval' },
-    143: { name: 'IMAP', description: 'Internet Message Access Protocol - Email' },
-    443: { name: 'HTTPS', description: 'Secure HTTP - Encrypted web' },
-    445: { name: 'SMB', description: 'Server Message Block - File/printer sharing' },
-    3306: { name: 'MySQL', description: 'MySQL Database Server' },
-    3389: { name: 'RDP', description: 'Remote Desktop Protocol - Windows remote' },
-    5432: { name: 'PostgreSQL', description: 'PostgreSQL Database Server' },
-    5900: { name: 'VNC', description: 'Virtual Network Computing - Remote desktop' },
-    8080: { name: 'HTTP-Alt', description: 'Alternate HTTP - Web services' },
-    8443: { name: 'HTTPS-Alt', description: 'Alternate HTTPS - Secure web services' },
-    9000: { name: 'Custom', description: 'Custom application port' }
-  };
-  
-  let html = `
-    <div class="ports-results-header">
-      <div>
-        <div>📍 Target IP</div>
-        <div class="ports-results-ip">${ip}</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="ports-results-time">${timestamp}</div>
-        <div style="color:var(--accent2);font-weight:600;font-size:14px;margin-top:4px;">
-          🔓 ${open_ports.length} port${open_ports.length !== 1 ? 's' : ''} open
-        </div>
-      </div>
-    </div>
-  `;
-  
-  if (open_ports.length > 0) {
-    html += `
-      <div style="margin-top:16px;">
-        <div style="font-size:11px;color:var(--textdim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">📡 Available Services</div>
-        <div class="ports-list">
-    `;
-    
-    open_ports.forEach(port => {
-      const service = serviceDetails[port] || { name: 'Unknown', description: 'Unknown service' };
-      html += `
-        <div class="ports-port-item">
-          <div style="flex:1;">
-            <div class="ports-port-number">PORT ${port}</div>
-            <div style="color:var(--accent2);font-weight:600;font-size:12px;margin-top:2px;">${service.name}</div>
-            <div style="font-size:11px;color:var(--textdim);margin-top:3px;">${service.description}</div>
-          </div>
-          <div class="ports-port-status">OPEN</div>
-        </div>
-      `;
-    });
-    
-    html += `
-        </div>
-      </div>
-      <div style="margin-top:12px;padding:12px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:4px;font-size:11px;color:var(--textdim);">
-        ✓ Found ${open_ports.length} accessible service${open_ports.length !== 1 ? 's' : ''} on this device
-      </div>
-    `;
-  } else {
-    html += `
-      <div style="margin-top:16px;padding:24px;text-align:center;background:rgba(5,10,15,0.8);border:1px solid var(--border);border-radius:4px;">
-        <div style="font-size:32px;margin-bottom:8px;">🔒</div>
-        <div style="color:var(--text);font-weight:600;margin-bottom:4px;">No Open Ports Found</div>
-        <div style="color:var(--textdim);font-size:11px;">
-          This device either:<br>
-          • Has no services running on common ports<br>
-          • Has firewall protection enabled<br>
-          • Is offline or unreachable<br>
-          • Blocking port scan attempts
-        </div>
-      </div>
-    `;
-  }
-  
-  portsResults.innerHTML = html;
-}
-
-console.log('[RealMap] Port Scanner module loaded');
-
-// Advanced reconnaissance functions
-async function getServiceInfo(ip, port) {
-  try {
-    const response = await fetch(`/api/service-enum/${ip}/${port}`);
-    const data = await response.json();
-    return data.service_info || null;
-  } catch (error) {
-    console.error('[RealMap] Service enum error:', error);
-    return null;
-  }
-}
-
-async function getReconInfo(ip) {
-  try {
-    // Try query-style endpoint first.
-    let response = await fetch(`/api/recon?target=${encodeURIComponent(ip)}`);
-    let data = null;
-
-    if (response.ok) {
-      data = await response.json();
-      if (data && data.status === 'success') {
-        return data;
-      }
-    }
-
-    // Fallback for older backend shape that only supports path-style endpoint.
-    response = await fetch(`/api/recon/${encodeURIComponent(ip)}`);
-    if (!response.ok) {
-      return {
-        status: 'error',
-        message: `Recon endpoint unavailable (${response.status}). Restart backend and try again.`
-      };
-    }
-
-    data = await response.json();
-    if (!data || data.status !== 'success') {
-      return {
-        status: 'error',
-        message: (data && data.message) ? data.message : 'Recon response was not successful.'
-      };
-    }
-
-    return data;
-  } catch (error) {
-    console.error('[RealMap] Recon error:', error);
-    return {
-      status: 'error',
-      message: 'Network error while running deep recon.'
-    };
-  }
-}
 
 async function getDNSInfo(target) {
   try {
     const response = await fetch(`/api/dns?target=${encodeURIComponent(target)}`);
-    const data = await response.json();
-    if (!response.ok || data.status !== 'success') {
-      return null;
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || data.status !== 'success') {
+      return {
+        ok: false,
+        message: (data && data.message) ? data.message : `DNS endpoint returned ${response.status}.`
+      };
     }
-    return data.data || null;
+    return {
+      ok: true,
+      data: data.data || null
+    };
   } catch (error) {
     console.error('[RealMap] DNS error:', error);
-    return null;
+    return {
+      ok: false,
+      message: 'Network error while running DNS lookup.'
+    };
   }
-}
-
-// Format SSL certificate info
-function formatSSLInfo(sslData) {
-  if (!sslData) return '<div style="color:var(--textdim);font-size:11px;">No SSL/TLS detected</div>';
-  
-  let html = `
-    <div style="background:rgba(0,212,255,0.08);padding:12px;border-radius:4px;font-size:11px;">
-      <div style="color:var(--accent);margin-bottom:8px;font-weight:600;">🔐 SSL/TLS Info</div>
-      <div style="color:var(--textdim);line-height:1.6;">
-        <div>Protocol: <span style="color:var(--text);">${sslData.protocol || 'Unknown'}</span></div>
-        <div>Cipher: <span style="color:var(--text);">${sslData.cipher || 'Unknown'}</span></div>
-        ${sslData.valid_from ? `<div>Valid From: <span style="color:var(--text);">${sslData.valid_from}</span></div>` : ''}
-        ${sslData.valid_until ? `<div>Valid Until: <span style="color:var(--text);">${sslData.valid_until}</span></div>` : ''}
-      </div>
-    </div>
-  `;
-  return html;
 }
 
 console.log('[RealMap] Script fully loaded and initialized');

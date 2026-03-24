@@ -89,7 +89,7 @@ web: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT app:app
 - `REALMAP_CLOUD_MODE=1` force cloud-safe behavior.
 - `REALMAP_ENABLE_SCANNING=1` re-enable LAN scan logic.
 - `REALMAP_ENABLE_BACKGROUND_SCANNER=1` re-enable periodic scanner loop.
-- `REALMAP_ENABLE_ACTIVE_PROBES=1` re-enable port/recon/dns/share probe routes.
+- `REALMAP_ENABLE_ACTIVE_PROBES=1` re-enable active probe routes where available.
 - `REALMAP_DATA_DIR=/tmp/realmap` change runtime file location.
 - `REALMAP_INGEST_TOKEN=<secret>` secure token required by `POST /api/ingest`.
 
@@ -147,15 +147,19 @@ Core endpoints:
 - `GET /api/health` - Current network health
 - `GET /api/stats` - Aggregate stats
 - `GET /api/ips` - Available discovered IP list
-- `GET /api/ports/<ip>` - Common-port scan on target IP
+- `GET /api/network-insights` - IP/MAC intelligence (vendor hints, subnet scope, duplicate IP/MAC conflict detection)
 
-Recon and DNS:
+DNS:
 
+- `GET /api/dns?target=<ip-or-hostname>`
+- `GET /api/dns/<ip-or-hostname>`
+
+Retired endpoints (return 410):
+
+- `GET /api/ports/<ip>`
 - `GET /api/recon?target=<ip>`
 - `GET /api/recon/<ip>`
 - `GET /api/service-enum/<ip>/<port>`
-- `GET /api/dns?target=<ip-or-hostname>`
-- `GET /api/dns/<ip-or-hostname>`
 
 Sharing:
 

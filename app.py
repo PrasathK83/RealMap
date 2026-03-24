@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import ssl
+import ipaddress
+import string
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -74,6 +76,26 @@ scanner_stop_event = threading.Event()
 scan_job_lock = threading.Lock()
 scan_job_active = False
 scan_executor = ThreadPoolExecutor(max_workers=max(1, int(os.getenv('REALMAP_SCAN_WORKERS', '2'))))
+last_conflict_signatures = {'duplicate_ips': set(), 'duplicate_macs': set()}
+
+# Lightweight OUI hints for common vendor families.
+OUI_VENDOR_HINTS = {
+    '00:1A:2B': 'Cisco',
+    '00:1B:63': 'Apple',
+    '00:50:56': 'VMware',
+    '00:0C:29': 'VMware',
+    '08:00:27': 'Oracle VirtualBox',
+    '3C:5A:B4': 'Google',
+    'FC:FB:FB': 'Google',
+    '00:1E:C2': 'Dell',
+    '00:14:22': 'Dell',
+    '00:25:90': 'Supermicro',
+    '3C:52:82': 'Hewlett Packard Enterprise',
+    'B8:27:EB': 'Raspberry Pi Foundation',
+    'DC:A6:32': 'Raspberry Pi Foundation',
+    'F4:F5:D8': 'Ubiquiti',
+    '24:A4:3C': 'Ubiquiti'
+}
 
 
 def _cloud_disabled_response(feature):
@@ -83,6 +105,162 @@ def _cloud_disabled_response(feature):
         'cloud_mode': IS_CLOUD_ENV,
         'message': f"{feature} is disabled in cloud mode. Set env var to enable if you understand the network restrictions."
     }), 503
+
+
+def _feature_removed_response(feature):
+    return jsonify({
+        'status': 'disabled',
+        'feature': feature,
+        'message': f"{feature} has been removed from this deployment."
+    }), 410
+
+
+def _normalize_mac(mac_value):
+    if not mac_value:
+        return None
+    raw = str(mac_value).strip().upper()
+    compact = ''.join(ch for ch in raw if ch in string.hexdigits)
+    if len(compact) != 12:
+        return None
+    return ':'.join(compact[i:i + 2] for i in range(0, 12, 2)).upper()
+
+
+def _mac_vendor_hint(normalized_mac):
+    if not normalized_mac:
+        return 'Unknown'
+    prefix = ':'.join(normalized_mac.split(':')[:3])
+    return OUI_VENDOR_HINTS.get(prefix, 'Unknown')
+
+
+def _is_locally_administered_mac(normalized_mac):
+    if not normalized_mac:
+        return False
+    try:
+        first_octet = int(normalized_mac.split(':')[0], 16)
+    except (ValueError, TypeError):
+        return False
+    return (first_octet & 0x02) == 0x02
+
+
+def _classify_ip_scope(ip_obj):
+    if ip_obj.is_loopback:
+        return 'loopback'
+    if ip_obj.is_link_local:
+        return 'link_local'
+    if ip_obj.is_multicast:
+        return 'multicast'
+    if ip_obj.is_reserved:
+        return 'reserved'
+    if ip_obj.is_private:
+        return 'private'
+    if ip_obj.is_global:
+        return 'public'
+    return 'special'
+
+
+def _build_network_insights(nodes):
+    per_device = {}
+    ip_to_macs = {}
+    mac_to_ips = {}
+    subnet_counts = {}
+
+    private_count = 0
+    public_count = 0
+    unknown_vendor_count = 0
+    local_mac_count = 0
+
+    for node in nodes:
+        ip = (node.get('ip') or '').strip()
+        if not ip:
+            continue
+
+        normalized_mac = _normalize_mac(node.get('mac'))
+        vendor = _mac_vendor_hint(normalized_mac)
+        if vendor == 'Unknown':
+            unknown_vendor_count += 1
+
+        local_mac = _is_locally_administered_mac(normalized_mac)
+        if local_mac:
+            local_mac_count += 1
+
+        scope = 'invalid'
+        ip_version = None
+        subnet = None
+        gateway_candidate = False
+
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            scope = _classify_ip_scope(ip_obj)
+            ip_version = ip_obj.version
+            if scope == 'private':
+                private_count += 1
+            elif scope == 'public':
+                public_count += 1
+
+            if ip_obj.version == 4:
+                subnet = str(ipaddress.ip_network(f"{ip}/24", strict=False))
+                subnet_counts[subnet] = subnet_counts.get(subnet, 0) + 1
+                gateway_candidate = ip.endswith('.1')
+            else:
+                subnet = f"{ip}/64"
+        except ValueError:
+            pass
+
+        if normalized_mac:
+            ip_to_macs.setdefault(ip, set()).add(normalized_mac)
+            mac_to_ips.setdefault(normalized_mac, set()).add(ip)
+
+        warnings = []
+        if local_mac:
+            warnings.append('Locally administered MAC (often virtual or randomized).')
+        if scope in ('loopback', 'link_local', 'multicast', 'reserved', 'invalid'):
+            warnings.append(f'IP scope is {scope.replace("_", " ")} and may have limited routing.')
+
+        per_device[ip] = {
+            'ip': ip,
+            'mac': normalized_mac,
+            'vendor_hint': vendor,
+            'mac_type': 'locally_administered' if local_mac else 'globally_administered',
+            'ip_version': ip_version,
+            'ip_scope': scope,
+            'subnet': subnet,
+            'gateway_candidate': gateway_candidate,
+            'warnings': warnings
+        }
+
+    duplicate_ip_conflicts = [
+        {'ip': ip, 'macs': sorted(list(macs)), 'count': len(macs)}
+        for ip, macs in ip_to_macs.items()
+        if len(macs) > 1
+    ]
+    duplicate_mac_conflicts = [
+        {'mac': mac, 'ips': sorted(list(ips)), 'count': len(ips)}
+        for mac, ips in mac_to_ips.items()
+        if len(ips) > 1
+    ]
+
+    subnet_distribution = [
+        {'subnet': subnet, 'devices': count}
+        for subnet, count in sorted(subnet_counts.items(), key=lambda item: item[1], reverse=True)
+    ]
+
+    return {
+        'summary': {
+            'total_devices': len(per_device),
+            'private_ip_devices': private_count,
+            'public_ip_devices': public_count,
+            'unknown_vendor_devices': unknown_vendor_count,
+            'locally_administered_mac_devices': local_mac_count,
+            'duplicate_ip_conflicts': len(duplicate_ip_conflicts),
+            'duplicate_mac_conflicts': len(duplicate_mac_conflicts)
+        },
+        'conflicts': {
+            'duplicate_ips': duplicate_ip_conflicts,
+            'duplicate_macs': duplicate_mac_conflicts
+        },
+        'subnets': subnet_distribution,
+        'per_device': per_device
+    }
 
 
 def _extract_topology_payload(raw):
@@ -207,6 +385,7 @@ def calculate_network_health(devices, stats):
 def track_device_changes(old_devices, new_devices):
     """Track and alert on device status changes."""
     global last_device_list
+    global last_conflict_signatures
     
     old_ips = {d['ip'] for d in old_devices}
     new_ips = {d['ip'] for d in new_devices}
@@ -251,6 +430,58 @@ def track_device_changes(old_devices, new_devices):
             device.get('type', ''),
             device.get('status', 'online')
         )
+
+    # Detect and alert only on newly observed conflict signatures.
+    insights = _build_network_insights(new_devices)
+    duplicate_ips = insights.get('conflicts', {}).get('duplicate_ips', [])
+    duplicate_macs = insights.get('conflicts', {}).get('duplicate_macs', [])
+
+    current_ip_sigs = {
+        f"{entry.get('ip')}|{'/'.join(entry.get('macs', []))}"
+        for entry in duplicate_ips
+    }
+    current_mac_sigs = {
+        f"{entry.get('mac')}|{'/'.join(entry.get('ips', []))}"
+        for entry in duplicate_macs
+    }
+
+    new_ip_conflicts = current_ip_sigs - last_conflict_signatures['duplicate_ips']
+    new_mac_conflicts = current_mac_sigs - last_conflict_signatures['duplicate_macs']
+
+    for entry in duplicate_ips:
+        sig = f"{entry.get('ip')}|{'/'.join(entry.get('macs', []))}"
+        if sig not in new_ip_conflicts:
+            continue
+        ip = entry.get('ip', 'unknown')
+        macs = ', '.join(entry.get('macs', [])) or 'unknown'
+        msg = f"IP conflict detected: {ip} seen on multiple MAC addresses ({macs})"
+        db.add_alert('ip_conflict', ip, 'Network', msg, 'error')
+        socketio.emit('new_alert', {
+            'type': 'ip_conflict',
+            'device': ip,
+            'message': msg,
+            'severity': 'error'
+        })
+        print(f"[RealMap] ! {msg}")
+
+    for entry in duplicate_macs:
+        sig = f"{entry.get('mac')}|{'/'.join(entry.get('ips', []))}"
+        if sig not in new_mac_conflicts:
+            continue
+        mac = entry.get('mac', 'unknown')
+        ips = ', '.join(entry.get('ips', [])) or 'unknown'
+        msg = f"MAC conflict detected: {mac} seen on multiple IP addresses ({ips})"
+        db.add_alert('mac_conflict', mac, 'Network', msg, 'error')
+        socketio.emit('new_alert', {
+            'type': 'mac_conflict',
+            'device': mac,
+            'message': msg,
+            'severity': 'error'
+        })
+        print(f"[RealMap] ! {msg}")
+
+    last_conflict_signatures['duplicate_ips'] = current_ip_sigs
+    last_conflict_signatures['duplicate_macs'] = current_mac_sigs
     
     last_device_list = new_devices
 
@@ -415,6 +646,27 @@ def get_available_ips():
     return jsonify({'status': 'error', 'message': 'No devices found'})
 
 
+@app.route('/api/network-insights')
+def get_network_insights():
+    """Return operational insights derived from observed IP and MAC data."""
+    snapshot = topology.get_latest_snapshot()
+    nodes = []
+    source = 'live'
+
+    if snapshot and isinstance(snapshot.get('nodes'), list):
+        nodes = snapshot.get('nodes', [])
+    else:
+        demo = scanner.get_demo_topology()
+        nodes = demo.get('nodes', []) if isinstance(demo, dict) else []
+        source = 'demo'
+
+    insights = _build_network_insights(nodes)
+    insights['status'] = 'success'
+    insights['source'] = source
+    insights['timestamp'] = time.strftime('%H:%M:%S')
+    return jsonify(insights)
+
+
 def scan_ports(ip, timeout=2):
     """Scan common ports on a given IP address."""
     open_ports = []
@@ -449,27 +701,8 @@ def scan_ports(ip, timeout=2):
 
 @app.route('/api/ports/<ip>')
 def get_ports(ip):
-    """Scan ports on a specific IP address."""
-    if not ENABLE_ACTIVE_PROBES:
-        return _cloud_disabled_response('port_scan')
-    try:
-        # Validate IP format
-        socket.inet_aton(ip)
-        
-        open_ports, closed_ports = scan_ports(ip, timeout=PORT_SCAN_TIMEOUT_SECONDS)
-        
-        return jsonify({
-            'status': 'success',
-            'ip': ip,
-            'open_ports': open_ports,
-            'closed_ports': closed_ports,
-            'total_scanned': len(open_ports) + len(closed_ports),
-            'timestamp': time.strftime('%H:%M:%S')
-        })
-    except socket.error:
-        return jsonify({'status': 'error', 'message': 'Invalid IP address'}), 400
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    """Port scan endpoint retired in this deployment profile."""
+    return _feature_removed_response('port_scan')
 
 
 def grab_banner(ip, port, timeout=3):
@@ -513,103 +746,20 @@ def get_ssl_info(ip, port, timeout=5):
 @app.route('/api/recon')
 @app.route('/api/recon/<ip>')
 def reconnaissance(ip=None):
-    """Comprehensive reconnaissance on target IP."""
-    if not ENABLE_ACTIVE_PROBES:
-        return _cloud_disabled_response('recon')
-    try:
-        if not ip:
-            ip = (request.args.get('target') or '').strip()
-        if not ip:
-            return jsonify({'status': 'error', 'message': 'target IP is required'}), 400
-        socket.inet_aton(ip)
-        
-        # Port scan
-        open_ports, _ = scan_ports(ip, timeout=2)
-        
-        # Service detection and banner grabbing
-        services = {}
-        for port in open_ports:
-            banner = grab_banner(ip, port, timeout=2)
-            ssl_info = None
-            
-            # If it's a web port, get SSL info
-            if port in [443, 8443, 8000, 8080]:
-                if port == 443 or port == 8443:
-                    ssl_info = get_ssl_info(ip, port, timeout=3)
-            
-            services[port] = {
-                'banner': banner,
-                'ssl_info': ssl_info
-            }
-        
-        # DNS resolution
-        dns_info = None
-        try:
-            dns_info = socket.gethostbyaddr(ip)
-        except:
-            try:
-                dns_info = socket.gethostbyname_ex(ip)
-            except:
-                dns_info = None
-        
-        return jsonify({
-            'status': 'success',
-            'ip': ip,
-            'open_ports': open_ports,
-            'services': services,
-            'dns': dns_info,
-            'timestamp': time.strftime('%H:%M:%S')
-        })
-    except socket.error:
-        return jsonify({'status': 'error', 'message': 'Invalid IP address'}), 400
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    """Recon endpoint retired in this deployment profile."""
+    return _feature_removed_response('recon')
 
 
 @app.route('/api/service-enum/<ip>/<int:port>')
 def service_enumeration(ip, port):
-    """Enumerate specific service on target."""
-    if not ENABLE_ACTIVE_PROBES:
-        return _cloud_disabled_response('service_enumeration')
-    try:
-        socket.inet_aton(ip)
-        
-        service_probes = {
-            80: b'HEAD / HTTP/1.0\r\nHost: {}\r\nConnection: close\r\n\r\n',
-            443: None,  # Will use SSL
-            22: b'',  # SSH banner is automatic
-            23: b'',  # Telnet banner
-            25: b'EHLO recon\r\nQUIT\r\n',  # SMTP
-            53: None,  # DNS (special handling)
-            110: b'USER test\r\nQUIT\r\n',  # POP3
-            143: b'A001 LOGOUT\r\n',  # IMAP
-        }
-        
-        response = {}
-        
-        if port == 443 or port == 8443:
-            response['ssl_certificate'] = get_ssl_info(ip, port, timeout=3)
-        else:
-            banner = grab_banner(ip, port, timeout=2)
-            response['banner'] = banner
-        
-        return jsonify({
-            'status': 'success',
-            'ip': ip,
-            'port': port,
-            'service_info': response,
-            'timestamp': time.strftime('%H:%M:%S')
-        })
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    """Service enumeration endpoint retired in this deployment profile."""
+    return _feature_removed_response('service_enumeration')
 
 
 @app.route('/api/dns')
 @app.route('/api/dns/<target>')
 def dns_lookup(target=None):
     """DNS resolution and lookup."""
-    if not ENABLE_ACTIVE_PROBES:
-        return _cloud_disabled_response('dns_lookup')
     try:
         if not target:
             target = (request.args.get('target') or '').strip()
@@ -619,30 +769,58 @@ def dns_lookup(target=None):
         result = {
             'target': target,
             'a_records': [],
+            'aaaa_records': [],
             'reverse': None,
-            'mx_records': []
+            'mx_records': [],
+            'ip': None,
+            'reverse_ip': None
         }
-        
-        # Forward DNS
+
+        is_ip_target = False
         try:
-            a_records = socket.gethostbyname_ex(target)
-            result['a_records'] = a_records[2] if a_records else []
-        except:
-            pass
-        
-        # Reverse DNS
-        try:
-            result['reverse'] = socket.gethostbyaddr(target)[0]
-        except:
-            pass
-        
-        # Try to resolve any IP
-        try:
-            ip = socket.gethostbyname(target)
-            result['ip'] = ip
-            result['reverse_ip'] = socket.gethostbyaddr(ip)[0]
-        except:
-            pass
+            ipaddress.ip_address(target)
+            is_ip_target = True
+        except ValueError:
+            is_ip_target = False
+
+        if is_ip_target:
+            result['ip'] = target
+            try:
+                result['reverse'] = socket.gethostbyaddr(target)[0]
+            except Exception:
+                pass
+        else:
+            # Use getaddrinfo so DNS works for both IPv4 and IPv6 hostnames.
+            try:
+                infos = socket.getaddrinfo(target, None)
+                ipv4 = set()
+                ipv6 = set()
+                for entry in infos:
+                    family, _, _, _, sockaddr = entry
+                    if family == socket.AF_INET and sockaddr:
+                        ipv4.add(sockaddr[0])
+                    elif family == socket.AF_INET6 and sockaddr:
+                        ipv6.add(sockaddr[0])
+
+                result['a_records'] = sorted(ipv4)
+                result['aaaa_records'] = sorted(ipv6)
+                if result['a_records']:
+                    result['ip'] = result['a_records'][0]
+                elif result['aaaa_records']:
+                    result['ip'] = result['aaaa_records'][0]
+            except Exception:
+                pass
+
+            try:
+                result['reverse'] = socket.gethostbyname_ex(target)[0]
+            except Exception:
+                pass
+
+            if result['ip']:
+                try:
+                    result['reverse_ip'] = socket.gethostbyaddr(result['ip'])[0]
+                except Exception:
+                    pass
         
         return jsonify({
             'status': 'success',
