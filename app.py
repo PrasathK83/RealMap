@@ -29,7 +29,13 @@ def _env_flag(name, default=False):
 
 def _create_socketio(flask_app):
     preferred_mode = os.getenv('REALMAP_ASYNC_MODE')
-    candidates = [preferred_mode] if preferred_mode else ['eventlet', 'gevent', 'threading']
+    if preferred_mode:
+        candidates = [preferred_mode]
+    elif sys.version_info >= (3, 13):
+        # Eventlet is currently unstable on newer Python runtimes in many hosts.
+        candidates = ['threading', 'gevent', 'eventlet']
+    else:
+        candidates = ['eventlet', 'gevent', 'threading']
     last_error = None
 
     for mode in candidates:
@@ -764,4 +770,12 @@ if __name__ == '__main__':
     print(f"  Scanning enabled: {'yes' if ENABLE_SCANNING else 'no'}")
     print("="*50 + "\n")
 
-    socketio.run(app, host='0.0.0.0', port=run_port, debug=False)
+    run_kwargs = {
+        'host': '0.0.0.0',
+        'port': run_port,
+        'debug': False,
+    }
+    if IS_CLOUD_ENV and socketio.async_mode == 'threading':
+        # Safety valve when platform start command still uses `python app.py`.
+        run_kwargs['allow_unsafe_werkzeug'] = True
+    socketio.run(app, **run_kwargs)

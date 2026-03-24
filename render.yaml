@@ -3,7 +3,7 @@ services:
     name: realmap
     env: python
     plan: free
-    rootDir: RealMap
+    rootDir: .
     buildCommand: pip install --upgrade pip; pip install -r requirements.txt
     startCommand: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT app:app
     envVars:
