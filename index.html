@@ -1447,7 +1447,12 @@ let latencyHistory = [];
 let dashboardMode = 'topology';
 let currentScanInterval = 15;
 let networkInsights = { summary: {}, conflicts: {}, per_device: {} };
-  let IS_CLOUD_ENV = false;
+let IS_CLOUD_ENV = false;
+
+// Initialize Socket.IO connection
+const socket = io();
+
+socket.on('connect', () => {
   console.log('[RealMap] Socket connected to server');
   try {
     addAlert('Connected to RealMap server', 'info');
