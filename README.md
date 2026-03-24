@@ -108,7 +108,3 @@ Use scanning and recon features only on systems and networks you own or are expl
 - If recon or DNS returns 404, ensure only one backend instance is running on port 5000.
 - If UI appears stale, hard refresh the browser.
 - If scan quality is low, run terminal as Administrator/root.
-
-## License
-
-Add your preferred license file (for example, MIT) and update this section.
