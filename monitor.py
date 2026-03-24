@@ -2,7 +2,8 @@ import json
 import os
 import time
 
-STATE_FILE = os.path.join(os.path.dirname(__file__), 'device_state.json')
+DATA_DIR = os.getenv('REALMAP_DATA_DIR', os.path.dirname(__file__))
+STATE_FILE = os.path.join(DATA_DIR, 'device_state.json')
 os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
 
 

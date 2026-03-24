@@ -4,8 +4,9 @@ import os
 import time
 from datetime import datetime
 
-SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), 'snapshots.json')
-HISTORY_FILE  = os.path.join(os.path.dirname(__file__), 'history.json')
+DATA_DIR = os.getenv('REALMAP_DATA_DIR', os.path.dirname(__file__))
+SNAPSHOT_FILE = os.path.join(DATA_DIR, 'snapshots.json')
+HISTORY_FILE  = os.path.join(DATA_DIR, 'history.json')
 
 os.makedirs(os.path.dirname(SNAPSHOT_FILE), exist_ok=True)
 

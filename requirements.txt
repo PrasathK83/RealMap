@@ -6,3 +6,4 @@ networkx==3.2.1
 scapy==2.5.0
 python-nmap==0.7.1
 requests==2.31.0
+gunicorn==22.0.0

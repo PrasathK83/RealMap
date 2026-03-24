@@ -66,6 +66,34 @@ Then open:
 http://localhost:5000
 ```
 
+## Deploying to Render
+
+This app now supports a cloud-safe mode by default on Render:
+
+- Active LAN scanning is disabled automatically.
+- Background scanner loop is disabled automatically.
+- Network-heavy probe endpoints are disabled automatically.
+
+This prevents crashes/timeouts in cloud environments that do not expose your local subnet.
+
+### Required start command
+
+Use the included `Procfile`:
+
+```text
+web: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT app:app
+```
+
+### Optional environment variables
+
+- `REALMAP_CLOUD_MODE=1` force cloud-safe behavior.
+- `REALMAP_ENABLE_SCANNING=1` re-enable LAN scan logic.
+- `REALMAP_ENABLE_BACKGROUND_SCANNER=1` re-enable periodic scanner loop.
+- `REALMAP_ENABLE_ACTIVE_PROBES=1` re-enable port/recon/dns/share probe routes.
+- `REALMAP_DATA_DIR=/tmp/realmap` change runtime file location.
+
+Note: Render filesystem is ephemeral unless a persistent disk is attached.
+
 ## API Overview
 
 Core endpoints:

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: realmap
+    env: python
+    plan: free
+    rootDir: RealMap
+    buildCommand: pip install --upgrade pip; pip install -r requirements.txt
+    startCommand: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: REALMAP_CLOUD_MODE
+        value: "1"
+      - key: REALMAP_ENABLE_SCANNING
+        value: "0"
+      - key: REALMAP_ENABLE_BACKGROUND_SCANNER
+        value: "0"
+      - key: REALMAP_ENABLE_ACTIVE_PROBES
+        value: "0"
+      - key: REALMAP_DATA_DIR
+        value: /tmp/realmap
+      - key: PYTHON_VERSION
+        value: 3.11.11

@@ -19,9 +19,39 @@ from topology import TopologyManager
 from monitor import ChangeMonitor
 from database import NetworkDatabase
 
+
+def _env_flag(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _create_socketio(flask_app):
+    preferred_mode = os.getenv('REALMAP_ASYNC_MODE')
+    candidates = [preferred_mode] if preferred_mode else ['eventlet', 'gevent', 'threading']
+    last_error = None
+
+    for mode in candidates:
+        try:
+            instance = SocketIO(flask_app, cors_allowed_origins='*', async_mode=mode)
+            print(f"[RealMap] SocketIO async mode: {instance.async_mode}")
+            return instance
+        except Exception as exc:
+            last_error = exc
+            print(f"[RealMap] Failed to init SocketIO with mode '{mode}': {exc}")
+
+    raise RuntimeError(f"Unable to initialize SocketIO. Last error: {last_error}")
+
 app = Flask(__name__, template_folder='.', static_folder='.')
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = _create_socketio(app)
+
+IS_CLOUD_ENV = _env_flag('REALMAP_CLOUD_MODE', default=False) or bool(os.getenv('RENDER'))
+ENABLE_SCANNING = _env_flag('REALMAP_ENABLE_SCANNING', default=not IS_CLOUD_ENV)
+ENABLE_BACKGROUND_SCANNER = _env_flag('REALMAP_ENABLE_BACKGROUND_SCANNER', default=not IS_CLOUD_ENV)
+ENABLE_ACTIVE_PROBES = _env_flag('REALMAP_ENABLE_ACTIVE_PROBES', default=not IS_CLOUD_ENV)
+PORT_SCAN_TIMEOUT_SECONDS = float(os.getenv('REALMAP_PORT_SCAN_TIMEOUT', '2.0'))
 
 scanner = NetworkScanner()
 topology = TopologyManager()
@@ -33,6 +63,83 @@ is_scanning = False
 SCAN_INTERVAL_SECONDS = 15
 last_device_list = []
 network_health_score = 100
+scanner_stop_event = threading.Event()
+scan_job_lock = threading.Lock()
+scan_job_active = False
+scan_executor = ThreadPoolExecutor(max_workers=max(1, int(os.getenv('REALMAP_SCAN_WORKERS', '2'))))
+
+
+def _cloud_disabled_response(feature):
+    return jsonify({
+        'status': 'disabled',
+        'feature': feature,
+        'cloud_mode': IS_CLOUD_ENV,
+        'message': f"{feature} is disabled in cloud mode. Set env var to enable if you understand the network restrictions."
+    }), 503
+
+
+def _mark_scan_job_complete():
+    global scan_job_active
+    with scan_job_lock:
+        scan_job_active = False
+
+
+def _submit_scan_job():
+    global scan_job_active
+    with scan_job_lock:
+        if scan_job_active:
+            return False
+        scan_job_active = True
+
+    future = scan_executor.submit(background_scanner_once)
+    future.add_done_callback(lambda _: _mark_scan_job_complete())
+    return True
+
+
+def _perform_scan_cycle():
+    global network_health_score
+
+    if not ENABLE_SCANNING:
+        payload = scanner.get_demo_topology()
+        payload.setdefault('changes', [])
+        payload.setdefault('health', network_health_score)
+        payload['scan_mode'] = 'degraded'
+        payload['message'] = 'Active network scan is disabled in cloud mode.'
+        payload['timestamp'] = time.strftime('%H:%M:%S')
+        topology.save_snapshot(payload)
+        socketio.emit('topology_update', payload)
+        return payload
+
+    print('[RealMap] Starting network scan...')
+    devices = scanner.discover_devices()
+    links = scanner.measure_links(devices)
+    graph = topology.build_graph(devices, links)
+    changes = monitor.detect_changes(devices)
+
+    stats = topology.get_stats(graph)
+    network_health_score = calculate_network_health(devices, stats)
+
+    track_device_changes(last_device_list, devices)
+    db.log_network_stats(
+        stats.get('total_devices', 0),
+        stats.get('online', 0),
+        stats.get('avg_latency', 0),
+        network_health_score
+    )
+
+    payload = {
+        'nodes': devices,
+        'links': links,
+        'stats': stats,
+        'changes': changes,
+        'health': network_health_score,
+        'scan_mode': 'active',
+        'timestamp': time.strftime('%H:%M:%S')
+    }
+    topology.save_snapshot(payload)
+    socketio.emit('topology_update', payload)
+    print(f"[RealMap] Scan complete. {len(devices)} devices found. Health: {network_health_score}%")
+    return payload
 
 def calculate_network_health(devices, stats):
     """Calculate network health score (0-100)."""
@@ -116,50 +223,19 @@ def track_device_changes(old_devices, new_devices):
 
 def background_scanner():
     """Background thread: scans network every SCAN_INTERVAL_SECONDS and pushes updates."""
-    global is_scanning, network_health_score
-    while True:
+    global is_scanning
+    while not scanner_stop_event.is_set():
         try:
             with scan_lock:
                 is_scanning = True
-            
-            print("[RealMap] Starting network scan...")
-            devices = scanner.discover_devices()
-            links   = scanner.measure_links(devices)
-            graph   = topology.build_graph(devices, links)
-            changes = monitor.detect_changes(devices)
-
-            stats = topology.get_stats(graph)
-            network_health_score = calculate_network_health(devices, stats)
-            
-            # Track device changes
-            track_device_changes(last_device_list, devices)
-            
-            # Log network statistics
-            db.log_network_stats(
-                stats.get('total_devices', 0),
-                stats.get('online', 0),
-                stats.get('avg_latency', 0),
-                network_health_score
-            )
-
-            payload = {
-                'nodes':   devices,
-                'links':   links,
-                'stats':   stats,
-                'changes': changes,
-                'health':  network_health_score,
-                'timestamp': time.strftime('%H:%M:%S')
-            }
-            topology.save_snapshot(payload)
-            socketio.emit('topology_update', payload)
-            print(f"[RealMap] Scan complete. {len(devices)} devices found. Health: {network_health_score}%")
+            _perform_scan_cycle()
 
         except Exception as e:
             print(f"[RealMap] Scan error: {e}")
         finally:
             with scan_lock:
                 is_scanning = False
-        time.sleep(SCAN_INTERVAL_SECONDS)
+        scanner_stop_event.wait(SCAN_INTERVAL_SECONDS)
 
 
 @app.route('/')
@@ -184,12 +260,12 @@ def get_topology():
 
 @app.route('/api/scan', methods=['POST'])
 def trigger_scan():
-    global is_scanning
-    if is_scanning:
+    if not ENABLE_SCANNING:
+        return _cloud_disabled_response('network_scan')
+    if is_scanning or scan_job_active:
         return jsonify({'status': 'already_scanning'})
-    thread = threading.Thread(target=background_scanner_once)
-    thread.daemon = True
-    thread.start()
+    if not _submit_scan_job():
+        return jsonify({'status': 'already_scanning'})
     return jsonify({'status': 'scan_started'})
 
 
@@ -256,7 +332,13 @@ def config():
             SCAN_INTERVAL_SECONDS = int(data['scan_interval'])
             return jsonify({'status': 'updated', 'scan_interval': SCAN_INTERVAL_SECONDS})
         return jsonify({'error': 'Invalid config'})
-    return jsonify({'scan_interval': SCAN_INTERVAL_SECONDS})
+    return jsonify({
+        'scan_interval': SCAN_INTERVAL_SECONDS,
+        'cloud_mode': IS_CLOUD_ENV,
+        'scanning_enabled': ENABLE_SCANNING,
+        'background_scanner_enabled': ENABLE_BACKGROUND_SCANNER,
+        'active_probes_enabled': ENABLE_ACTIVE_PROBES
+    })
 
 
 @app.route('/api/ips')
@@ -323,11 +405,13 @@ def scan_ports(ip, timeout=2):
 @app.route('/api/ports/<ip>')
 def get_ports(ip):
     """Scan ports on a specific IP address."""
+    if not ENABLE_ACTIVE_PROBES:
+        return _cloud_disabled_response('port_scan')
     try:
         # Validate IP format
         socket.inet_aton(ip)
         
-        open_ports, closed_ports = scan_ports(ip, timeout=3)
+        open_ports, closed_ports = scan_ports(ip, timeout=PORT_SCAN_TIMEOUT_SECONDS)
         
         return jsonify({
             'status': 'success',
@@ -385,6 +469,8 @@ def get_ssl_info(ip, port, timeout=5):
 @app.route('/api/recon/<ip>')
 def reconnaissance(ip=None):
     """Comprehensive reconnaissance on target IP."""
+    if not ENABLE_ACTIVE_PROBES:
+        return _cloud_disabled_response('recon')
     try:
         if not ip:
             ip = (request.args.get('target') or '').strip()
@@ -438,6 +524,8 @@ def reconnaissance(ip=None):
 @app.route('/api/service-enum/<ip>/<int:port>')
 def service_enumeration(ip, port):
     """Enumerate specific service on target."""
+    if not ENABLE_ACTIVE_PROBES:
+        return _cloud_disabled_response('service_enumeration')
     try:
         socket.inet_aton(ip)
         
@@ -475,6 +563,8 @@ def service_enumeration(ip, port):
 @app.route('/api/dns/<target>')
 def dns_lookup(target=None):
     """DNS resolution and lookup."""
+    if not ENABLE_ACTIVE_PROBES:
+        return _cloud_disabled_response('dns_lookup')
     try:
         if not target:
             target = (request.args.get('target') or '').strip()
@@ -521,6 +611,8 @@ def dns_lookup(target=None):
 @app.route('/api/share', methods=['POST'])
 def share_data():
     """Send selected RealMap data via HTTP webhook or UDP broadcast."""
+    if IS_CLOUD_ENV and not ENABLE_ACTIVE_PROBES:
+        return _cloud_disabled_response('data_share')
     data = request.json or {}
     target = (data.get('webhook_url') or '').strip()
     protocol = (data.get('protocol') or 'http').strip().lower()
@@ -615,22 +707,13 @@ def send_via_udp(target, outbound, payload_type):
 
 def background_scanner_once():
     global is_scanning
+    if not ENABLE_SCANNING:
+        _perform_scan_cycle()
+        return
     try:
         with scan_lock:
             is_scanning = True
-        devices = scanner.discover_devices()
-        links   = scanner.measure_links(devices)
-        graph   = topology.build_graph(devices, links)
-        changes = monitor.detect_changes(devices)
-        payload = {
-            'nodes':   devices,
-            'links':   links,
-            'stats':   topology.get_stats(graph),
-            'changes': changes,
-            'timestamp': time.strftime('%H:%M:%S')
-        }
-        topology.save_snapshot(payload)
-        socketio.emit('topology_update', payload)
+        _perform_scan_cycle()
     except Exception as e:
         print(f"[RealMap] Scan error: {e}")
     finally:
@@ -651,10 +734,13 @@ def handle_connect():
 @socketio.on('request_scan')
 def handle_scan_request():
     print('[RealMap] Received request_scan event')
+    if not ENABLE_SCANNING:
+        emit('scan_error', {'message': 'Scanning is disabled in cloud mode'})
+        return
     try:
-        thread = threading.Thread(target=background_scanner_once)
-        thread.daemon = True
-        thread.start()
+        if not _submit_scan_job():
+            emit('scan_error', {'message': 'A scan is already in progress'})
+            return
         emit('scan_started', {'message': 'Scanning network...'})
         print('[RealMap] Sent scan_started event to client')
     except Exception as e:
@@ -663,14 +749,19 @@ def handle_scan_request():
 
 
 if __name__ == '__main__':
-    # Start background scanner
-    bg_thread = threading.Thread(target=background_scanner)
-    bg_thread.daemon = True
-    bg_thread.start()
+    if ENABLE_BACKGROUND_SCANNER:
+        bg_thread = threading.Thread(target=background_scanner, daemon=True)
+        bg_thread.start()
+        print('[RealMap] Background scanner enabled')
+    else:
+        print('[RealMap] Background scanner disabled')
 
     print("\n" + "="*50)
     print("  🗺️  RealMap — Network Topology Engine")
-    print("  Open: http://localhost:5000")
+    run_port = int(os.getenv('PORT', '5000'))
+    print(f"  Open: http://localhost:{run_port}")
+    print(f"  Cloud mode: {'on' if IS_CLOUD_ENV else 'off'}")
+    print(f"  Scanning enabled: {'yes' if ENABLE_SCANNING else 'no'}")
     print("="*50 + "\n")
 
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=run_port, debug=False)

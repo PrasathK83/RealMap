@@ -3,7 +3,9 @@ import json
 import os
 from datetime import datetime
 
-DB_FILE = os.path.join(os.path.dirname(__file__), 'network_data.db')
+DATA_DIR = os.getenv('REALMAP_DATA_DIR', os.path.dirname(__file__))
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_FILE = os.path.join(DATA_DIR, 'network_data.db')
 
 class NetworkDatabase:
     def __init__(self):
