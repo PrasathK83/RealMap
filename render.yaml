@@ -14,7 +14,7 @@ services:
       - key: REALMAP_ENABLE_BACKGROUND_SCANNER
         value: "0"
       - key: REALMAP_ENABLE_ACTIVE_PROBES
-        value: "0"
+        value: "1"
       - key: REALMAP_DATA_DIR
         value: /tmp/realmap
       - key: PYTHON_VERSION

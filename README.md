@@ -91,6 +91,47 @@ web: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT app:app
 - `REALMAP_ENABLE_BACKGROUND_SCANNER=1` re-enable periodic scanner loop.
 - `REALMAP_ENABLE_ACTIVE_PROBES=1` re-enable port/recon/dns/share probe routes.
 - `REALMAP_DATA_DIR=/tmp/realmap` change runtime file location.
+- `REALMAP_INGEST_TOKEN=<secret>` secure token required by `POST /api/ingest`.
+
+### Cloud limitations and edge ingest
+
+- LAN topology discovery does not work directly from Render.
+- Use a local RealMap instance or scanner on your LAN and send payloads to:
+
+```text
+POST /api/ingest
+```
+
+Accepted payloads:
+
+- Direct topology payload with `nodes` and `links`
+- Wrapped outbound payload from `/api/share` where topology is in `data`
+
+When cloud mode is enabled, active probes are blocked for private/LAN target IPs.
+
+### Run local edge uploader (recommended)
+
+Run this on a machine inside your LAN to keep the hosted dashboard live:
+
+```bash
+python edge_uploader.py --url https://your-app.onrender.com --token YOUR_TOKEN --interval 15
+```
+
+Environment-variable alternative:
+
+```bash
+export REALMAP_EDGE_TARGET_URL=https://your-app.onrender.com
+export REALMAP_INGEST_TOKEN=YOUR_TOKEN
+python edge_uploader.py
+```
+
+Windows PowerShell:
+
+```powershell
+$env:REALMAP_EDGE_TARGET_URL="https://your-app.onrender.com"
+$env:REALMAP_INGEST_TOKEN="YOUR_TOKEN"
+python edge_uploader.py
+```
 
 Note: Render filesystem is ephemeral unless a persistent disk is attached.
 
